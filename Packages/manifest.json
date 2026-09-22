@@ -8,6 +8,7 @@
     "com.unity.learn.iet-framework": "4.0.4",
     "com.unity.learn.iet-framework.authoring": "1.2.2",
     "com.unity.multiplayer.center": "1.0.0",
+    "com.unity.nuget.newtonsoft-json": "3.2.1",
     "com.unity.playworks.upp": "file:../../../Pluguins/7.2.0/scripts",
     "com.unity.test-framework": "1.6.0",
     "com.unity.timeline": "1.8.13",

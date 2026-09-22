@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 using UnityEngine;
 
 namespace HyperCasual.Core
@@ -18,7 +19,7 @@ namespace HyperCasual.Core
         public static T Read<T>(string key) where T : new()
         {
             return PlayerPrefs.HasKey(key)
-                    ? JsonUtility.FromJson<T>(PlayerPrefs.GetString(key))
+                    ? JsonConvert.DeserializeObject<T>(PlayerPrefs.GetString(key))
                     : new T();
         }
 
@@ -30,7 +31,7 @@ namespace HyperCasual.Core
         /// <typeparam name="T">The class type to serialize</typeparam>
         public static void Write<T>(string key, T data) where T : new()
         {
-            PlayerPrefs.SetString(key, JsonUtility.ToJson(data));
+            PlayerPrefs.SetString(key, JsonConvert.SerializeObject(data));
         }
 
         /// <summary>
