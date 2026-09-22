@@ -1,0 +1,74 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 89305aa391d1c5141bbe1628d930a2c5, type: 3}
+  m_Name: Advanced Tutorial
+  m_EditorClassIdentifier: 
+  Modified:
+    m_PersistentCalls:
+      m_Calls: []
+  ParentContainer: {fileID: 11400000, guid: 453878bdb842641aa92a441201487183, type: 2}
+  OrderInView: 1
+  BackgroundImage: {fileID: 2800000, guid: 64a72fe1d519a436aa87023755720c05, type: 3}
+  LeftImage: {fileID: 0}
+  Title:
+    m_Untranslated: AdvancedTutorial_Title
+  Subtitle:
+    m_Untranslated: AdvancedTutorial_SubTitle
+  Description:
+    m_Untranslated: AdvancedTutorial_Description
+  ProjectLayout: {fileID: 0}
+  Sections:
+  - OrderInView: 0
+    Heading:
+      m_Untranslated: AdvancedTutorial_Part1_Heading
+    Text:
+      m_Untranslated: AdvancedTutorial_Part1_Text
+    Metadata: 
+    Url: 
+    Image: {fileID: 2800000, guid: 48a051a3a9f854a65b885c915bf9fa79, type: 3}
+    Tutorial: {fileID: 11400000, guid: 20c5ee3c92b974a07954463ed955510b, type: 2}
+  - OrderInView: 0
+    Heading:
+      m_Untranslated: AdvancedTutorial_Part2_Heading
+    Text:
+      m_Untranslated: AdvancedTutorial_Part2_Text
+    Metadata: 
+    Url: 
+    Image: {fileID: 2800000, guid: b7e4ade25ef5c4521bf2eb5755d32236, type: 3}
+    Tutorial: {fileID: 11400000, guid: 0f50abfb12df04450b53ce1e9012e3be, type: 2}
+  - OrderInView: 0
+    Heading:
+      m_Untranslated: AdvancedTutorial_Part3_Heading
+    Text:
+      m_Untranslated: AdvancedTutorial_Part3_Text
+    Metadata: 
+    Url: 
+    Image: {fileID: 2800000, guid: d92bbaa5220e04f24bb407e706ae96b3, type: 3}
+    Tutorial: {fileID: 11400000, guid: 81d2309bde0034b1b81cdf52e5d3638a, type: 2}
+  - OrderInView: 0
+    Heading:
+      m_Untranslated: AdvancedTutorial_Part4_Heading
+    Text:
+      m_Untranslated: AdvancedTutorial_Part4_Text
+    Metadata: 
+    Url: 
+    Image: {fileID: 2800000, guid: 6fce4ae7054a34336a639437df49ba29, type: 3}
+    Tutorial: {fileID: 11400000, guid: ef93c8c161bec46a782dc2f764a8db64, type: 2}
+  - OrderInView: 0
+    Heading:
+      m_Untranslated: AdvancedTutorial_Part5_Heading
+    Text:
+      m_Untranslated: AdvancedTutorial_Part5_Text
+    Metadata: 
+    Url: 
+    Image: {fileID: 2800000, guid: 86d0ee64203e244b0b62c52af35ba3bc, type: 3}
+    Tutorial: {fileID: 11400000, guid: ae9e28d4ad12e4cd682d7fab1a14eba9, type: 2}

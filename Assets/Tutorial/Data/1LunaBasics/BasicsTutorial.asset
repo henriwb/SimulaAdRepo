@@ -1,0 +1,78 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 89305aa391d1c5141bbe1628d930a2c5, type: 3}
+  m_Name: BasicsTutorial
+  m_EditorClassIdentifier: 
+  Modified:
+    m_PersistentCalls:
+      m_Calls: []
+  ParentContainer: {fileID: 11400000, guid: 453878bdb842641aa92a441201487183, type: 2}
+  OrderInView: 0
+  BackgroundImage: {fileID: 2800000, guid: d96df195ee71f4bafb3993d13926aadb, type: 3}
+  Title:
+    m_Untranslated: BasicsTutorial_Title
+  Subtitle:
+    m_Untranslated: BasicsTutorial_SubTitle
+  Description:
+    m_Untranslated: 
+  ProjectLayout: {fileID: 0}
+  Sections:
+  - OrderInView: 0
+    Heading:
+      m_Untranslated: BasicsTutorial_Part1_Heading
+    Text:
+      m_Untranslated: BasicsTutorial_Part1_Text
+    Metadata: 
+    Url: https://playground.lunalabs.io/downloads
+    Image: {fileID: 2800000, guid: 747964d446ede440a912bdcde303aac2, type: 3}
+    Tutorial: {fileID: 0}
+    Name: DownloadPlugin
+  - OrderInView: 1
+    Heading:
+      m_Untranslated: BasicsTutorial_Part2_Heading
+    Text:
+      m_Untranslated: BasicsTutorial_Part2_Text
+    Metadata: 
+    Url: https://docs.lunalabs.io/docs/playable/setup/dependencies/
+    Image: {fileID: 2800000, guid: a8c716917b63d4e9b87fc5d73b36a30c, type: 3}
+    Tutorial: {fileID: 0}
+    Name: SetupDependencies
+  - OrderInView: 1
+    Heading:
+      m_Untranslated: BasicsTutorial_Part3_Heading
+    Text:
+      m_Untranslated: BasicsTutorial_Part3_Text
+    Metadata: 
+    Url: 
+    Image: {fileID: 2800000, guid: c78eac4b691e6415c9f41b975e1a06cc, type: 3}
+    Tutorial: {fileID: 11400000, guid: 5d0791eb85ae44eb280bed46e48fba56, type: 2}
+    Name: InitialSetup
+  - OrderInView: 4
+    Heading:
+      m_Untranslated: BasicsTutorial_Part4_Heading
+    Text:
+      m_Untranslated: BasicsTutorial_Part4_Text
+    Metadata: 
+    Url: 
+    Image: {fileID: 2800000, guid: 0196b906311df47ba8fa2b0ef66bbc18, type: 3}
+    Tutorial: {fileID: 11400000, guid: 914344b18ebf44c04a4a25965dcb5a10, type: 2}
+    Name: LearnBasics
+  - OrderInView: 10
+    Heading:
+      m_Untranslated: BasicsTutorial_Part5_Heading
+    Text:
+      m_Untranslated: BasicsTutorial_Part5_Text
+    Metadata: 
+    Url: https://docs.lunalabs.io/docs/playable/quickstart
+    Image: {fileID: 2800000, guid: dce321e4494a6470b9590ccbeffa98a1, type: 3}
+    Tutorial: {fileID: 11400000, guid: 914344b18ebf44c04a4a25965dcb5a10, type: 2}
+    Name: GettingStarted
