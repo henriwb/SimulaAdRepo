@@ -44,6 +44,7 @@ ExportedObj/
 *.csproj
 *.unityproj
 *.sln
+*.slnx
 *.suo
 *.tmp
 *.user
@@ -101,3 +102,10 @@ InitTestScene*.unity*
 
 # Design briefs / working plans — personal and temporary, never shared
 /[Pp]lans/
+
+# Unity Playworks (Luna) build cache
+/LunaTemp/
+
+# IDE settings
+.idea/
+.vscode/
