@@ -20,6 +20,7 @@ namespace SimulaAd.Bubbles
         [SerializeField] BoardView m_BoardView;
         [SerializeField] HudView m_Hud;
         [SerializeField] AimGuideView m_AimGuide;
+        [SerializeField] ScorePopupView m_ScorePopups;
 
         [Header("Controllers")]
         [SerializeField] BubbleController m_Bubbles;
@@ -60,17 +61,18 @@ namespace SimulaAd.Bubbles
                     restarter.Initialize(this);
             }
 
-            m_Hud.ShootPressed += OnShootPressed;
+            m_Lever.ShotReleased += OnShotReleased;
             m_Lever.AimChanged += RefreshAimGuide;
             m_BoardView.LayoutChanged += RefreshAimGuide;
         }
 
         void OnDestroy()
         {
-            if (m_Hud != null)
-                m_Hud.ShootPressed -= OnShootPressed;
             if (m_Lever != null)
+            {
+                m_Lever.ShotReleased -= OnShotReleased;
                 m_Lever.AimChanged -= RefreshAimGuide;
+            }
             if (m_BoardView != null)
                 m_BoardView.LayoutChanged -= RefreshAimGuide;
         }
@@ -85,6 +87,8 @@ namespace SimulaAd.Bubbles
         {
             StopAllCoroutines();
             m_Bubbles.Cancel();
+            if (m_ScorePopups != null)
+                m_ScorePopups.HideAll();
             m_Board.Generate();
             m_Lever.ResetAim();
 
@@ -99,7 +103,8 @@ namespace SimulaAd.Bubbles
             SetState(GameState.Aiming);
         }
 
-        void OnShootPressed()
+        /// <summary>Aiming drag released: fire (ignored unless the game is waiting for a shot).</summary>
+        void OnShotReleased()
         {
             if (m_Session.State != GameState.Aiming)
                 return;
@@ -138,6 +143,8 @@ namespace SimulaAd.Bubbles
             if (result.Popped > 0)
             {
                 m_Session.Score += result.Popped * m_Config.PointsPerPop + result.Dropped * m_Config.PointsPerDrop;
+                ShowScorePopups(m_Board.PoppedCells, m_Config.PointsPerPop);
+                ShowScorePopups(m_Board.DroppedCells, m_Config.PointsPerDrop);
                 RefreshHud();
                 PlaySound(SoundID.CoinSound);
                 yield return new WaitForSeconds(m_BoardView.ResolveDuration);
@@ -185,11 +192,22 @@ namespace SimulaAd.Bubbles
 
             int popped = m_Board.PopAll();
             m_Session.Score += popped * m_Config.PointsPerPop;
+            ShowScorePopups(m_Board.PoppedCells, m_Config.PointsPerPop);
             RefreshHud();
             PlaySound(SoundID.CoinSound);
             yield return new WaitForSeconds(m_BoardView.ResolveDuration);
 
             StartCoroutine(GameClear());
+        }
+
+        /// <summary>One "+points" label on each cell (positions come from the grid, not the animating views).</summary>
+        void ShowScorePopups(List<Vector2Int> cells, int points)
+        {
+            if (m_ScorePopups == null)
+                return;
+
+            foreach (Vector2Int cell in cells)
+                m_ScorePopups.Show(m_BoardView.CellToWorld(cell.x, cell.y), points);
         }
 
         void ShowEndCard()
@@ -229,7 +247,6 @@ namespace SimulaAd.Bubbles
         void SetState(GameState state)
         {
             m_Session.State = state;
-            m_Hud.SetShootEnabled(state == GameState.Aiming);
             RefreshAimGuide();
         }
 

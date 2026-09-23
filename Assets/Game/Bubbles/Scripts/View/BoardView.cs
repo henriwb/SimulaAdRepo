@@ -63,6 +63,11 @@ namespace SimulaAd.Bubbles
             return new Vector2(x, y);
         }
 
+        public Vector3 CellToWorld(int row, int col)
+        {
+            return m_Area.TransformPoint(CellToLocal(row, col));
+        }
+
         public Vector2 WorldToLocal(Vector3 worldPosition)
         {
             return m_Area.InverseTransformPoint(worldPosition);

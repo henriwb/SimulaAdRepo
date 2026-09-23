@@ -39,7 +39,15 @@ namespace SimulaAd.Bubbles
         readonly List<Vector2Int> m_Neighbors = new List<Vector2Int>();
         readonly List<Vector2Int> m_Cluster = new List<Vector2Int>();
         readonly List<Vector2Int> m_Stack = new List<Vector2Int>();
+        readonly List<Vector2Int> m_PoppedCells = new List<Vector2Int>();
+        readonly List<Vector2Int> m_DroppedCells = new List<Vector2Int>();
         readonly bool[] m_Visited;
+
+        /// <summary>Cells popped by the last <see cref="Resolve"/> or <see cref="PopAll"/>.</summary>
+        public List<Vector2Int> PoppedCells => m_PoppedCells;
+
+        /// <summary>Cells dropped (disconnected from the ceiling) by the last <see cref="Resolve"/>.</summary>
+        public List<Vector2Int> DroppedCells => m_DroppedCells;
 
         public BoardController(BubbleGameConfig config, BubbleGridModel grid, BoardView view)
         {
@@ -162,6 +170,8 @@ namespace SimulaAd.Bubbles
         public ResolveResult Resolve(Vector2Int cell)
         {
             ResolveResult result = new ResolveResult();
+            m_PoppedCells.Clear();
+            m_DroppedCells.Clear();
 
             CollectCluster(cell);
             if (m_Cluster.Count < m_Config.MatchCount)
@@ -171,6 +181,7 @@ namespace SimulaAd.Bubbles
             {
                 m_Grid.Set(popped.x, popped.y, BubbleGridModel.Empty);
                 m_View.Pop(popped.x, popped.y);
+                m_PoppedCells.Add(popped);
             }
             result.Popped = m_Cluster.Count;
 
@@ -184,6 +195,7 @@ namespace SimulaAd.Bubbles
 
                     m_Grid.Set(row, col, BubbleGridModel.Empty);
                     m_View.Drop(row, col);
+                    m_DroppedCells.Add(new Vector2Int(row, col));
                     result.Dropped++;
                 }
             }
@@ -194,6 +206,9 @@ namespace SimulaAd.Bubbles
         /// <summary>Pops every placed bubble. Returns how many were popped.</summary>
         public int PopAll()
         {
+            m_PoppedCells.Clear();
+            m_DroppedCells.Clear();
+
             int popped = 0;
             for (int row = 0; row < m_Grid.Rows; row++)
             {
@@ -204,6 +219,7 @@ namespace SimulaAd.Bubbles
 
                     m_Grid.Set(row, col, BubbleGridModel.Empty);
                     m_View.Pop(row, col);
+                    m_PoppedCells.Add(new Vector2Int(row, col));
                     popped++;
                 }
             }

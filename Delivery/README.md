@@ -54,7 +54,7 @@ Note: the exported HTML contains URL strings from Playworks' built-in debug tool
 
 | Requirement | Status / implementation |
 |---|---|
-| Touch + mouse | Horizontal swipe anywhere on the game UI aims (EventSystem drag → `SwipeInputView`); Shoot is a UI Button. TODO: verify on device |
+| Touch + mouse | Drag horizontally anywhere on the game UI to aim, release to shoot (EventSystem drag → `SwipeInputView`). A drag cut by focus loss is cancelled, not fired. TODO: verify on device |
 | Portrait 320×568 / 390×844 | TODO |
 | Other orientation (adapt or rotate prompt) | TODO |
 | No page scroll competing with gameplay | TODO |
@@ -103,6 +103,7 @@ TODO
 - **Game: Puzzle Bobble–style bubble shooter** built entirely in UI (RectTransforms, no physics): circle math in the puzzle area's local space, so it is deterministic and Playworks-safe. Hex offset-row grid; views re-layout from the area width on resize/rotation.
 - **Strict MVC, no static state:** Models are data only (`BubbleGameConfig`, `BubbleGridModel`, `GameSessionModel`); grid rules (clusters, floating bubbles, landing cell) live in `BoardController`; Views only draw and forward input; `GameLoopController` is the composition root wired by serialized references.
 - **Aim guide from the real flight code:** `TrajectoryController` holds the step/bounce/contact rules used by both the shot and the preview, so the dotted guide (1 wall bounce, like Puzzle Bobble) and the ghost bubble on the landing cell can't disagree with the actual shot. Dots are pooled UI Images (LineRenderer doesn't render in a UI Canvas; a custom mesh Graphic was avoided as a Playworks risk). Recomputed only on aim change, board change or resize.
+- **Score feedback:** each popped/dropped bubble spawns a pooled "+points" TextMeshProUGUI at its cell that rises and fades (`ScorePopupView`); popups are cleared on replay.
 - **Always winnable:** the next bubble is drawn only from colors still on the board; no lose state (short ad session).
 - **Replay = in-place state reset** (`GameLoopController.ResetGame`), not a scene reload: stops coroutines, cancels an in-flight shot, returns every bubble to the pool, hides the End Card (a GameObject toggled with `SetActive`).
 - **End Card fixes:** CTA listener registered once (it was added on every open → duplicate clicks after replay); CTA shows a local "CTA clicked — demo only" message + console log instead of `InstallFullGame()`; removed `LifeCycle.GameEnded()`.
