@@ -3,11 +3,14 @@ namespace SimulaAd.Bubbles
     /// <summary>
     /// Hexagonal "offset rows" grid: even rows hold <see cref="Columns"/> cells,
     /// odd rows hold one less and are shifted half a bubble to the right.
-    /// Each cell stores a color index or <see cref="Empty"/>. Model: data only.
+    /// Each cell stores a color index, <see cref="Special"/> or <see cref="Empty"/>. Model: data only.
     /// </summary>
     public class BubbleGridModel
     {
         public const int Empty = -1;
+
+        /// <summary>Wildcard bubble: matches any color; popping it clears its row.</summary>
+        public const int Special = -2;
 
         public readonly int Columns;
         public readonly int Rows;

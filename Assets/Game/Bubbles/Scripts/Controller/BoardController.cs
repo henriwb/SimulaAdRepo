@@ -8,6 +8,8 @@ namespace SimulaAd.Bubbles
     {
         public int Popped;
         public int Dropped;
+        /// <summary>Rows wiped by popped special bubbles.</summary>
+        public int RowsCleared;
     }
 
     /// <summary>
@@ -79,15 +81,55 @@ namespace SimulaAd.Bubbles
 
             int colors = ColorCount;
             int rows = Mathf.Min(m_Config.StartRows, m_Grid.Rows);
+
+            // Fill the model first, then swap in the specials, then draw.
+            m_Stack.Clear(); // reused as the list of filled cells
             for (int row = 0; row < rows; row++)
             {
                 for (int col = 0; col < m_Grid.RowLength(row); col++)
                 {
-                    int color = m_Random.Range(0, colors);
-                    m_Grid.Set(row, col, color);
-                    m_View.Spawn(row, col, color);
+                    m_Grid.Set(row, col, m_Random.Range(0, colors));
+                    m_Stack.Add(new Vector2Int(row, col));
                 }
             }
+
+            PlaceSpecials();
+
+            for (int i = 0; i < m_Stack.Count; i++)
+                m_View.Spawn(m_Stack[i].x, m_Stack[i].y, m_Grid.Get(m_Stack[i].x, m_Stack[i].y));
+            m_Stack.Clear();
+        }
+
+        /// <summary>Turns <see cref="BubbleGameConfig.SpecialCount"/> random filled cells into special bubbles.</summary>
+        void PlaceSpecials()
+        {
+            if (m_Config.SpecialBubble == null || m_Config.SpecialCount <= 0)
+                return;
+
+            // Pick distinct cells: candidates are m_Stack[0..remaining); a picked one is swapped to the end.
+            int remaining = m_Stack.Count;
+            int count = Mathf.Min(m_Config.SpecialCount, remaining);
+            for (int i = 0; i < count; i++)
+            {
+                int pick = m_Random.Range(0, remaining);
+                Vector2Int cell = m_Stack[pick];
+                m_Grid.Set(cell.x, cell.y, BubbleGridModel.Special);
+
+                remaining--;
+                m_Stack[pick] = m_Stack[remaining];
+                m_Stack[remaining] = cell;
+            }
+        }
+
+        /// <summary>True while any regular (non-special) bubble remains.</summary>
+        public bool HasRegularBubbles()
+        {
+            for (int row = 0; row < m_Grid.Rows; row++)
+                for (int col = 0; col < m_Grid.RowLength(row); col++)
+                    if (m_Grid.Get(row, col) >= 0)
+                        return true;
+
+            return false;
         }
 
         public bool IsEmpty()
@@ -108,7 +150,7 @@ namespace SimulaAd.Bubbles
                 for (int col = 0; col < m_Grid.RowLength(row); col++)
                 {
                     int color = m_Grid.Get(row, col);
-                    if (color != BubbleGridModel.Empty && !result.Contains(color))
+                    if (color >= 0 && !result.Contains(color)) // regular colors only (skip empty/special)
                         result.Add(color);
                 }
             }
@@ -169,7 +211,10 @@ namespace SimulaAd.Bubbles
             m_View.Attach(view, cell.x, cell.y);
         }
 
-        /// <summary>Pops the same-color cluster at <paramref name="cell"/> (if big enough), then drops floating bubbles.</summary>
+        /// <summary>
+        /// Pops the same-color cluster at <paramref name="cell"/> (special bubbles count as any color)
+        /// if big enough; each popped special also clears its whole row. Then drops floating bubbles.
+        /// </summary>
         public ResolveResult Resolve(Vector2Int cell)
         {
             ResolveResult result = new ResolveResult();
@@ -184,11 +229,14 @@ namespace SimulaAd.Bubbles
             for (int i = 0; i < m_Cluster.Count; i++)
             {
                 Vector2Int popped = m_Cluster[i];
-                m_Grid.Set(popped.x, popped.y, BubbleGridModel.Empty);
-                m_View.Pop(popped.x, popped.y);
-                m_PoppedCells.Add(popped);
+                if (m_Grid.Get(popped.x, popped.y) == BubbleGridModel.Special)
+                {
+                    ClearRow(popped.x);
+                    result.RowsCleared++;
+                }
+                PopCell(popped.x, popped.y);
             }
-            result.Popped = m_Cluster.Count;
+            result.Popped = m_PoppedCells.Count;
 
             MarkConnectedToCeiling();
             for (int row = 0; row < m_Grid.Rows; row++)
@@ -206,6 +254,24 @@ namespace SimulaAd.Bubbles
             }
 
             return result;
+        }
+
+        /// <summary>Pops every bubble in <paramref name="row"/> (special bubble bonus).</summary>
+        void ClearRow(int row)
+        {
+            for (int col = 0; col < m_Grid.RowLength(row); col++)
+                PopCell(row, col);
+        }
+
+        /// <summary>Pops one cell if occupied (safe to call twice for the same cell).</summary>
+        void PopCell(int row, int col)
+        {
+            if (m_Grid.Get(row, col) == BubbleGridModel.Empty)
+                return;
+
+            m_Grid.Set(row, col, BubbleGridModel.Empty);
+            m_View.Pop(row, col);
+            m_PoppedCells.Add(new Vector2Int(row, col));
         }
 
         /// <summary>Pops every placed bubble. Returns how many were popped.</summary>
@@ -253,7 +319,9 @@ namespace SimulaAd.Bubbles
                 {
                     Vector2Int next = m_Neighbors[i];
                     int index = Index(next.x, next.y);
-                    if (m_Visited[index] || m_Grid.Get(next.x, next.y) != color)
+                    int nextColor = m_Grid.Get(next.x, next.y);
+                    // Special bubbles are wildcards: they join (and extend) any color's cluster.
+                    if (m_Visited[index] || (nextColor != color && nextColor != BubbleGridModel.Special))
                         continue;
 
                     m_Visited[index] = true;

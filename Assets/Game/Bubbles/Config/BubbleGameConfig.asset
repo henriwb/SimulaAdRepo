@@ -21,6 +21,8 @@ MonoBehaviour:
   - {fileID: -8732201886075528616, guid: 452f0267b4c85334c8b6af639fe0d193, type: 3}
   - {fileID: -8732201886075528616, guid: cf86a07d151927e44a4d600c75615aa0, type: 3}
   ColorCount: 4
+  SpecialBubble: {fileID: 21300000, guid: a0e29fb4708de7548b9b06731dba9ba6, type: 3}
+  SpecialCount: 2
   MatchCount: 4
   PointsPerPop: 10
   PointsPerDrop: 20

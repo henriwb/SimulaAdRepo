@@ -170,6 +170,17 @@ namespace SimulaAd.Bubbles
                 yield return new WaitForSeconds(m_BoardView.ResolveDuration);
             }
 
+            // Only special bubbles left: they can't form a match on their own, so they pop as a bonus.
+            if (!m_Board.IsEmpty() && !m_Board.HasRegularBubbles())
+            {
+                int bonus = m_Board.PopAll();
+                m_Session.Score += bonus * m_Config.PointsPerPop;
+                ShowScorePopups(m_Board.PoppedCells, m_Config.PointsPerPop);
+                RefreshHud();
+                PlaySound(SoundID.CoinSound);
+                yield return new WaitForSeconds(m_BoardView.ResolveDuration);
+            }
+
             if (m_Board.IsEmpty())
             {
                 StartCoroutine(GameClear());

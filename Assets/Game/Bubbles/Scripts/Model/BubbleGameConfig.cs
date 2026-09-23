@@ -23,6 +23,12 @@ namespace SimulaAd.Bubbles
         [Tooltip("How many colors are used (clamped to the sprite count).")]
         public int ColorCount = 4;
 
+        [Header("Special bubble")]
+        [Tooltip("Wildcard bubble: counts as any color in a match; when popped it clears its whole row.")]
+        public Sprite SpecialBubble;
+        [Tooltip("Special bubbles placed on the starting board.")]
+        public int SpecialCount = 3;
+
         [Header("Rules")]
         public int MatchCount = 4;
         public int PointsPerPop = 10;

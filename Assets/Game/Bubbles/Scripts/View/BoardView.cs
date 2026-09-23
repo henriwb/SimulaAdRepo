@@ -70,6 +70,8 @@ namespace SimulaAd.Bubbles
 
         public Sprite GetSprite(int color)
         {
+            if (color == BubbleGridModel.Special)
+                return m_Config.SpecialBubble;
             if (color < 0 || color >= m_Config.ColorSprites.Count)
                 return null;
 
