@@ -25,6 +25,10 @@ namespace SimulaAd.Bubbles
         [SerializeField] CoinEffectManager m_CoinEffect;
         [Tooltip("Optional screen shake when bubbles pop.")]
         [SerializeField] ScreenShakeView m_Shake;
+        [Tooltip("Optional left/right sweep along the row when a special bubble clears it.")]
+        [SerializeField] RowClearEffectView m_RowClear;
+        [Tooltip("Optional fading trail behind the shot bubble.")]
+        [SerializeField] ShotTrailView m_Trail;
         [Tooltip("Optional character that jumps when a bubble is shot.")]
         [SerializeField] JumpingMascotView m_Mascot;
 
@@ -103,6 +107,10 @@ namespace SimulaAd.Bubbles
                 m_ScorePopups.Tick(deltaTime);
             if (m_CoinEffect != null)
                 m_CoinEffect.Tick(deltaTime);
+            if (m_RowClear != null)
+                m_RowClear.Tick(deltaTime);
+            if (m_Trail != null)
+                m_Trail.Tick(m_Bubbles.FlyingView, m_BoardView.GetSprite(m_Bubbles.FlyingColor), deltaTime);
             if (m_Cheer != null)
                 m_Cheer.Tick(deltaTime);
         }
@@ -116,6 +124,10 @@ namespace SimulaAd.Bubbles
                 m_ScorePopups.HideAll();
             if (m_Shake != null)
                 m_Shake.Stop();
+            if (m_RowClear != null)
+                m_RowClear.HideAll();
+            if (m_Trail != null)
+                m_Trail.HideAll();
             m_Hud.ResetIndicators();
             if (m_CoinEffect != null)
                 m_CoinEffect.HideAll();
@@ -190,6 +202,7 @@ namespace SimulaAd.Bubbles
                 RefreshHud();
                 ReportProgress();
                 ShakeForClear(result.Popped + result.Dropped, result.RowsCleared);
+                PlayRowClears();
                 PlaySound(SoundID.CoinSound);
                 yield return new WaitForSeconds(m_BoardView.ResolveDuration);
             }
@@ -348,6 +361,22 @@ namespace SimulaAd.Bubbles
             Vector2 origin = m_BoardView.WorldToLocal(m_Hud.CurrentBubbleWorldPosition);
             Vector2Int landing = m_Trajectory.PredictPath(origin, m_Session.AimAngle, m_Config.GuideMaxBounces, m_GuidePoints);
             m_AimGuide.Show(m_GuidePoints, landing, m_Session.CurrentColor);
+        }
+
+        /// <summary>Line-clear sweep for each special bubble popped by the last resolve (left and right along its row).</summary>
+        void PlayRowClears()
+        {
+            if (m_RowClear == null)
+                return;
+
+            List<Vector2Int> specials = m_Board.SpecialCells;
+            for (int i = 0; i < specials.Count; i++)
+            {
+                Vector3 left;
+                Vector3 right;
+                m_BoardView.GetRowEdgesWorld(specials[i].x, out left, out right);
+                m_RowClear.Play(m_BoardView.CellToWorld(specials[i].x, specials[i].y), left, right);
+            }
         }
 
         /// <summary>Shake scaled by how much was cleared: a 4-match is a small bump, big clears and row wipes hit harder.</summary>

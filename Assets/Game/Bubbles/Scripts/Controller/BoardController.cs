@@ -43,6 +43,10 @@ namespace SimulaAd.Bubbles
         readonly List<Vector2Int> m_Stack = new List<Vector2Int>();
         readonly List<Vector2Int> m_PoppedCells = new List<Vector2Int>();
         readonly List<Vector2Int> m_DroppedCells = new List<Vector2Int>();
+        readonly List<Vector2Int> m_SpecialCells = new List<Vector2Int>();
+
+        /// <summary>Special bubbles popped by the last <see cref="Resolve"/> (each one cleared its row).</summary>
+        public List<Vector2Int> SpecialCells => m_SpecialCells;
         readonly bool[] m_Visited;
 
         /// <summary>Cells popped by the last <see cref="Resolve"/> or <see cref="PopAll"/>.</summary>
@@ -232,6 +236,7 @@ namespace SimulaAd.Bubbles
             ResolveResult result = new ResolveResult();
             m_PoppedCells.Clear();
             m_DroppedCells.Clear();
+            m_SpecialCells.Clear();
 
             CollectCluster(cell);
             if (m_Cluster.Count < m_Config.MatchCount)
@@ -243,6 +248,7 @@ namespace SimulaAd.Bubbles
                 Vector2Int popped = m_Cluster[i];
                 if (m_Grid.Get(popped.x, popped.y) == BubbleGridModel.Special)
                 {
+                    m_SpecialCells.Add(popped);
                     ClearRow(popped.x);
                     result.RowsCleared++;
                 }
@@ -291,6 +297,7 @@ namespace SimulaAd.Bubbles
         {
             m_PoppedCells.Clear();
             m_DroppedCells.Clear();
+            m_SpecialCells.Clear();
 
             int popped = 0;
             for (int row = 0; row < m_Grid.Rows; row++)

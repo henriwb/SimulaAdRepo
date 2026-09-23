@@ -23,6 +23,18 @@ namespace SimulaAd.Bubbles
         float m_FlightTime;
         Action<Vector2Int, int, BubbleView> m_OnLanded;
 
+        /// <summary>True while a shot is in the air.</summary>
+        public bool IsFlying => m_Flying != null;
+
+        /// <summary>In-flight position, in the play area's local space.</summary>
+        public Vector2 FlyingPosition => m_Position;
+
+        /// <summary>Color index of the shot in the air.</summary>
+        public int FlyingColor => m_FlyingColor;
+
+        /// <summary>The bubble view in the air, or null.</summary>
+        public BubbleView FlyingView => m_Flying;
+
         public void Initialize(BubbleGameConfig config, BoardView boardView, BoardController board, TrajectoryController trajectory)
         {
             m_Config = config;

@@ -100,6 +100,20 @@ namespace SimulaAd.Bubbles
             return m_Area.TransformPoint(CellToLocal(row, col));
         }
 
+        /// <summary>World positions of the left and right edges of the playfield, at a row's height.</summary>
+        public void GetRowEdgesWorld(int row, out Vector3 left, out Vector3 right)
+        {
+            Rect bounds = Bounds;
+            float y = CellToLocal(row, 0).y;
+            left = m_Area.TransformPoint(new Vector3(bounds.xMin, y, 0f));
+            right = m_Area.TransformPoint(new Vector3(bounds.xMax, y, 0f));
+        }
+
+        public Vector3 LocalToWorld(Vector2 localPosition)
+        {
+            return m_Area.TransformPoint(localPosition);
+        }
+
         public Vector2 WorldToLocal(Vector3 worldPosition)
         {
             return m_Area.InverseTransformPoint(worldPosition);
