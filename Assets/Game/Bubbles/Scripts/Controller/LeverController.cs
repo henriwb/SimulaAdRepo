@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace SimulaAd.Bubbles
@@ -14,6 +15,9 @@ namespace SimulaAd.Bubbles
 
         GameSessionModel m_Session;
         BubbleGameConfig m_Config;
+
+        /// <summary>Raised whenever the aim angle changes (swipe or reset).</summary>
+        public event Action AimChanged;
 
         public void Initialize(GameSessionModel session, BubbleGameConfig config)
         {
@@ -42,6 +46,9 @@ namespace SimulaAd.Bubbles
         {
             m_Session.AimAngle = Mathf.Clamp(degrees, -m_Config.AimLimitDegrees, m_Config.AimLimitDegrees);
             m_View.SetAngle(m_Session.AimAngle);
+
+            if (AimChanged != null)
+                AimChanged();
         }
     }
 }

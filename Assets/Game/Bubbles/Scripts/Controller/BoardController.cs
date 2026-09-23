@@ -191,6 +191,26 @@ namespace SimulaAd.Bubbles
             return result;
         }
 
+        /// <summary>Pops every placed bubble. Returns how many were popped.</summary>
+        public int PopAll()
+        {
+            int popped = 0;
+            for (int row = 0; row < m_Grid.Rows; row++)
+            {
+                for (int col = 0; col < m_Grid.RowLength(row); col++)
+                {
+                    if (m_Grid.Get(row, col) == BubbleGridModel.Empty)
+                        continue;
+
+                    m_Grid.Set(row, col, BubbleGridModel.Empty);
+                    m_View.Pop(row, col);
+                    popped++;
+                }
+            }
+
+            return popped;
+        }
+
         void CollectCluster(Vector2Int start)
         {
             m_Cluster.Clear();

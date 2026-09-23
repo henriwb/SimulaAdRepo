@@ -45,6 +45,12 @@ namespace SimulaAd.Bubbles
             m_Image.sprite = sprite;
         }
 
+        public void SetAlpha(float alpha)
+        {
+            EnsureCache();
+            m_Image.color = new Color(1f, 1f, 1f, alpha);
+        }
+
         public void SetDiameter(float diameter)
         {
             EnsureCache();

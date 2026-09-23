@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -25,6 +26,9 @@ namespace SimulaAd.Bubbles
         readonly List<BubbleView> m_Animating = new List<BubbleView>();
         readonly List<BubbleView> m_Pool = new List<BubbleView>();
         readonly List<int> m_KeyBuffer = new List<int>();
+
+        /// <summary>Raised after a resize/rotation re-layout (bubble size and positions changed).</summary>
+        public event Action LayoutChanged;
 
         public float Diameter { get; private set; }
         public float RowHeight { get; private set; }
@@ -138,6 +142,9 @@ namespace SimulaAd.Bubbles
                 view.SetDiameter(Diameter);
                 view.SetLocalPosition(CellToLocal(key / m_Columns, key % m_Columns));
             }
+
+            if (LayoutChanged != null)
+                LayoutChanged();
         }
 
         BubbleView Detach(int row, int col)

@@ -27,4 +27,6 @@ MonoBehaviour:
   ShotSpeed: 18
   AimLimitDegrees: 75
   SwipeDegreesPerScreenWidth: 150
+  HitDistanceFactor: 0.85
+  GuideMaxBounces: 1
   ClearDelay: 1.2

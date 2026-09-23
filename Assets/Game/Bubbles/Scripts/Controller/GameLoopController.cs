@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using HyperCasual.Gameplay;
 using HyperCasual.Runner;
 using UnityEngine;
 
@@ -18,6 +19,7 @@ namespace SimulaAd.Bubbles
         [Header("Views")]
         [SerializeField] BoardView m_BoardView;
         [SerializeField] HudView m_Hud;
+        [SerializeField] AimGuideView m_AimGuide;
 
         [Header("Controllers")]
         [SerializeField] BubbleController m_Bubbles;
@@ -30,8 +32,11 @@ namespace SimulaAd.Bubbles
         GameSessionModel m_Session;
         BubbleGridModel m_Grid;
         BoardController m_Board;
+        TrajectoryController m_Trajectory;
+        EndCardController m_EndCardController;
 
         readonly List<int> m_ColorBuffer = new List<int>();
+        readonly List<Vector2> m_GuidePoints = new List<Vector2>();
 
         void Awake()
         {
@@ -40,17 +45,34 @@ namespace SimulaAd.Bubbles
 
             m_BoardView.Setup(m_Config.Columns);
             m_Board = new BoardController(m_Config, m_Grid, m_BoardView);
+            m_Trajectory = new TrajectoryController(m_Config, m_BoardView, m_Board);
 
-            m_Bubbles.Initialize(m_Config, m_BoardView, m_Board);
+            m_Bubbles.Initialize(m_Config, m_BoardView, m_Board, m_Trajectory);
             m_Lever.Initialize(m_Session, m_Config);
 
+            // The End Card animator idles at scale 0; OpenEndCard() plays its intro animation.
+            if (m_EndCard != null)
+            {
+                m_EndCardController = m_EndCard.GetComponentInChildren<EndCardController>(true);
+
+                // The Replay button lives inside the End Card prefab, which can't reference scene objects.
+                foreach (RunRestarter restarter in m_EndCard.GetComponentsInChildren<RunRestarter>(true))
+                    restarter.Initialize(this);
+            }
+
             m_Hud.ShootPressed += OnShootPressed;
+            m_Lever.AimChanged += RefreshAimGuide;
+            m_BoardView.LayoutChanged += RefreshAimGuide;
         }
 
         void OnDestroy()
         {
             if (m_Hud != null)
                 m_Hud.ShootPressed -= OnShootPressed;
+            if (m_Lever != null)
+                m_Lever.AimChanged -= RefreshAimGuide;
+            if (m_BoardView != null)
+                m_BoardView.LayoutChanged -= RefreshAimGuide;
         }
 
         void Start()
@@ -123,13 +145,7 @@ namespace SimulaAd.Bubbles
 
             if (m_Board.IsEmpty())
             {
-                SetState(GameState.Cleared);
-                PlaySound(SoundID.EndSound);
-                m_Hud.SetGameClearVisible(true);
-                yield return new WaitForSeconds(m_Config.ClearDelay);
-
-                if (m_EndCard != null)
-                    m_EndCard.SetActive(true);
+                StartCoroutine(GameClear());
                 yield break;
             }
 
@@ -137,6 +153,58 @@ namespace SimulaAd.Bubbles
             KeepQueueOnBoardColors();
             RefreshHud();
             SetState(GameState.Aiming);
+        }
+
+        IEnumerator GameClear()
+        {
+            SetState(GameState.Cleared);
+            PlaySound(SoundID.EndSound);
+            m_Hud.SetGameClearVisible(true);
+            yield return new WaitForSeconds(m_Config.ClearDelay);
+
+            ShowEndCard();
+        }
+
+        /// <summary>
+        /// Debug: pops every bubble and runs the normal Game Clear flow (End Card, Replay).
+        /// Triggered from the GameLoopController inspector button in Play Mode.
+        /// </summary>
+        public void DebugClearBoard()
+        {
+            if (m_Session == null || m_Session.State == GameState.Cleared)
+                return;
+
+            StopAllCoroutines();
+            m_Bubbles.Cancel();
+            StartCoroutine(DebugClearRoutine());
+        }
+
+        IEnumerator DebugClearRoutine()
+        {
+            SetState(GameState.Resolving);
+
+            int popped = m_Board.PopAll();
+            m_Session.Score += popped * m_Config.PointsPerPop;
+            RefreshHud();
+            PlaySound(SoundID.CoinSound);
+            yield return new WaitForSeconds(m_BoardView.ResolveDuration);
+
+            StartCoroutine(GameClear());
+        }
+
+        void ShowEndCard()
+        {
+            if (m_EndCard == null)
+            {
+                Debug.LogWarning($"[{nameof(GameLoopController)}] End Card not assigned.");
+                return;
+            }
+
+            // Activating first runs EndCardController.Awake (registers the CTA) before opening.
+            // Deactivating on ResetGame resets its Animator, so every open animates in again.
+            m_EndCard.SetActive(true);
+            if (m_EndCardController != null)
+                m_EndCardController.OpenEndCard();
         }
 
         void KeepQueueOnBoardColors()
@@ -162,6 +230,24 @@ namespace SimulaAd.Bubbles
         {
             m_Session.State = state;
             m_Hud.SetShootEnabled(state == GameState.Aiming);
+            RefreshAimGuide();
+        }
+
+        /// <summary>Predicts the shot with the same rules as the real flight; shown only while aiming.</summary>
+        void RefreshAimGuide()
+        {
+            if (m_AimGuide == null || m_Session == null)
+                return;
+
+            if (m_Session.State != GameState.Aiming)
+            {
+                m_AimGuide.Hide();
+                return;
+            }
+
+            Vector2 origin = m_BoardView.WorldToLocal(m_Hud.CurrentBubbleWorldPosition);
+            Vector2Int landing = m_Trajectory.PredictPath(origin, m_Session.AimAngle, m_Config.GuideMaxBounces, m_GuidePoints);
+            m_AimGuide.Show(m_GuidePoints, landing, m_Session.CurrentColor);
         }
 
         void RefreshHud()

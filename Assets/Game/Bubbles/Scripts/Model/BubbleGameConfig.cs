@@ -35,6 +35,12 @@ namespace SimulaAd.Bubbles
         public float AimLimitDegrees = 75f;
         [Tooltip("Aim degrees added by swiping across the full screen width (swipe right = aim right).")]
         public float SwipeDegreesPerScreenWidth = 150f;
+        [Tooltip("Contact distance as a fraction of the bubble diameter (lower = shots slip through gaps more easily).")]
+        public float HitDistanceFactor = 0.85f;
+
+        [Header("Aim Guide")]
+        [Tooltip("Wall bounces the guide shows before it stops (classic Puzzle Bobble shows 1).")]
+        public int GuideMaxBounces = 1;
 
         [Header("Flow")]
         [Tooltip("Seconds between Game Clear and opening the End Card.")]
