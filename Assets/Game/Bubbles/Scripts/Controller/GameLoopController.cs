@@ -21,6 +21,8 @@ namespace SimulaAd.Bubbles
         [SerializeField] HudView m_Hud;
         [SerializeField] AimGuideView m_AimGuide;
         [SerializeField] ScorePopupView m_ScorePopups;
+        [Tooltip("Optional character that jumps when a bubble is shot.")]
+        [SerializeField] JumpingMascotView m_Mascot;
 
         [Header("Controllers")]
         [SerializeField] BubbleController m_Bubbles;
@@ -89,6 +91,8 @@ namespace SimulaAd.Bubbles
             m_Bubbles.Cancel();
             if (m_ScorePopups != null)
                 m_ScorePopups.HideAll();
+            if (m_Mascot != null)
+                m_Mascot.ResetPose();
             m_Board.Generate();
             m_Lever.ResetAim();
 
@@ -119,6 +123,9 @@ namespace SimulaAd.Bubbles
 
             Vector2 origin = m_BoardView.WorldToLocal(m_Hud.CurrentBubbleWorldPosition);
             m_Bubbles.Launch(color, m_Session.AimAngle, origin, OnBubbleLanded);
+
+            if (m_Mascot != null)
+                m_Mascot.PlayShotJump();
         }
 
         void OnBubbleLanded(Vector2Int cell, int color, BubbleView view)

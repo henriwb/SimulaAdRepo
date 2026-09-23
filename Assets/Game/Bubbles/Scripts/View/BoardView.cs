@@ -6,14 +6,20 @@ namespace SimulaAd.Bubbles
 {
     /// <summary>
     /// Draws the bubble grid inside the puzzle area (put this on the puzzle area RectTransform).
-    /// Converts grid cells to local positions from the current area width, so a resize or
-    /// rotation only re-lays out the bubbles. View: visuals and layout only.
+    /// The board has a fixed design width, so bubbles keep the same size whatever the area's
+    /// width (portrait or landscape layout); the grid is centered horizontally at the top of the
+    /// area and only shrinks if the area is narrower than the board. View: visuals and layout only.
     /// </summary>
     [RequireComponent(typeof(RectTransform))]
     public class BoardView : MonoBehaviour
     {
         const float k_RowHeightFactor = 0.8660254f; // sqrt(3) / 2 for packed circles
 
+        [Tooltip("Board width in canvas design units (bubble diameter = this / columns). Keeps bubble size identical across layouts.")]
+        [SerializeField] float m_BoardWidth = 360f;
+        [Tooltip("Bubble size multiplier while the screen is landscape.")]
+        [Range(0.3f, 1f)]
+        [SerializeField] float m_LandscapeScale = 0.7f;
         [SerializeField] BubbleView m_BubbleTemplate;
         [SerializeField] BubbleGameConfig m_Config;
         [SerializeField] float m_PopDuration = 0.2f;
@@ -21,6 +27,8 @@ namespace SimulaAd.Bubbles
 
         RectTransform m_Area;
         int m_Columns;
+        float m_LaidOutWidth = -1f;
+        bool m_LaidOutLandscape;
 
         readonly Dictionary<int, BubbleView> m_Placed = new Dictionary<int, BubbleView>();
         readonly List<BubbleView> m_Animating = new List<BubbleView>();
@@ -32,7 +40,19 @@ namespace SimulaAd.Bubbles
 
         public float Diameter { get; private set; }
         public float RowHeight { get; private set; }
-        public Rect Bounds => m_Area.rect;
+        /// <summary>
+        /// Playfield in local space: the grid's width (columns × diameter), centered in the area,
+        /// full area height. Shots bounce off its sides and stop at its top.
+        /// </summary>
+        public Rect Bounds
+        {
+            get
+            {
+                Rect area = m_Area.rect;
+                float width = Diameter * m_Columns;
+                return new Rect(area.center.x - width * 0.5f, area.yMin, width, area.height);
+            }
+        }
         public float ResolveDuration => Mathf.Max(m_PopDuration, m_DropDuration);
 
         public void Setup(int columns)
@@ -134,10 +154,29 @@ namespace SimulaAd.Bubbles
                 Relayout();
         }
 
+        // The Playworks runtime may size the canvas after Awake and may not send
+        // OnRectTransformDimensionsChange, so also watch the width every frame (one float compare).
+        void LateUpdate()
+        {
+            if (m_Area == null || m_Columns <= 0)
+                return;
+
+            if (!Mathf.Approximately(m_Area.rect.width, m_LaidOutWidth) || IsLandscape() != m_LaidOutLandscape)
+                Relayout();
+        }
+
         void Relayout()
         {
-            Diameter = m_Area.rect.width / m_Columns;
+            m_LaidOutWidth = m_Area.rect.width;
+            m_LaidOutLandscape = IsLandscape();
+
+            // Fixed board width keeps the bubble size across layouts; landscape applies its own scale;
+            // shrink further only if the area is narrower than the board.
+            float designWidth = m_BoardWidth * (m_LaidOutLandscape ? m_LandscapeScale : 1f);
+            float boardWidth = m_LaidOutWidth > 0f ? Mathf.Min(designWidth, m_LaidOutWidth) : designWidth;
+            Diameter = boardWidth / m_Columns;
             RowHeight = Diameter * k_RowHeightFactor;
+            Debug.Log($"[{nameof(BoardView)}] Layout: area width={m_LaidOutWidth:0.#}, bubble diameter={Diameter:0.#}");
 
             m_KeyBuffer.Clear();
             m_KeyBuffer.AddRange(m_Placed.Keys);
@@ -150,6 +189,11 @@ namespace SimulaAd.Bubbles
 
             if (LayoutChanged != null)
                 LayoutChanged();
+        }
+
+        bool IsLandscape()
+        {
+            return Screen.width > Screen.height;
         }
 
         BubbleView Detach(int row, int col)
