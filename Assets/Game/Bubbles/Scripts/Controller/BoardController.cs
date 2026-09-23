@@ -121,6 +121,18 @@ namespace SimulaAd.Bubbles
             }
         }
 
+        /// <summary>Bubbles currently on the board (regular + special).</summary>
+        public int CountBubbles()
+        {
+            int count = 0;
+            for (int row = 0; row < m_Grid.Rows; row++)
+                for (int col = 0; col < m_Grid.RowLength(row); col++)
+                    if (m_Grid.Get(row, col) != BubbleGridModel.Empty)
+                        count++;
+
+            return count;
+        }
+
         /// <summary>True while any regular (non-special) bubble remains.</summary>
         public bool HasRegularBubbles()
         {

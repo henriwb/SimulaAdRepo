@@ -21,12 +21,16 @@ namespace SimulaAd.Bubbles
         [SerializeField] HudView m_Hud;
         [SerializeField] AimGuideView m_AimGuide;
         [SerializeField] ScorePopupView m_ScorePopups;
+        [Tooltip("Optional coins flying from cleared bubbles to the score icon.")]
+        [SerializeField] CoinEffectManager m_CoinEffect;
         [Tooltip("Optional character that jumps when a bubble is shot.")]
         [SerializeField] JumpingMascotView m_Mascot;
 
         [Header("Controllers")]
         [SerializeField] BubbleController m_Bubbles;
         [SerializeField] LeverController m_Lever;
+        [Tooltip("Optional cheer phrases on progress milestones.")]
+        [SerializeField] CheerPhraseController m_Cheer;
 
         [Header("Shared systems")]
         [SerializeField] GameObject m_EndCard;
@@ -92,8 +96,13 @@ namespace SimulaAd.Bubbles
         void Update()
         {
             // Score popups animate by hand; their view may sit on an inactive template (no Update of its own).
+            float deltaTime = SafeTime.Delta;
             if (m_ScorePopups != null)
-                m_ScorePopups.Tick(SafeTime.Delta);
+                m_ScorePopups.Tick(deltaTime);
+            if (m_CoinEffect != null)
+                m_CoinEffect.Tick(deltaTime);
+            if (m_Cheer != null)
+                m_Cheer.Tick(deltaTime);
         }
 
         /// <summary>Starts a fresh run in place: new board, score 0, aim centered, no pending timers, End Card hidden.</summary>
@@ -103,9 +112,13 @@ namespace SimulaAd.Bubbles
             m_Bubbles.Cancel();
             if (m_ScorePopups != null)
                 m_ScorePopups.HideAll();
+            if (m_CoinEffect != null)
+                m_CoinEffect.HideAll();
             if (m_Mascot != null)
                 m_Mascot.ResetPose();
             m_Board.Generate();
+            if (m_Cheer != null)
+                m_Cheer.ResetRun(m_Board.CountBubbles());
             m_Lever.ResetAim();
             m_Lever.SetInputEnabled(true);
 
@@ -163,9 +176,11 @@ namespace SimulaAd.Bubbles
             if (result.Popped > 0)
             {
                 m_Session.Score += result.Popped * m_Config.PointsPerPop + result.Dropped * m_Config.PointsPerDrop;
-                ShowScorePopups(m_Board.PoppedCells, m_Config.PointsPerPop);
-                ShowScorePopups(m_Board.DroppedCells, m_Config.PointsPerDrop);
+                BeginClearFeedback();
+                ShowClearFeedback(m_Board.PoppedCells, m_Config.PointsPerPop);
+                ShowClearFeedback(m_Board.DroppedCells, m_Config.PointsPerDrop);
                 RefreshHud();
+                ReportProgress();
                 PlaySound(SoundID.CoinSound);
                 yield return new WaitForSeconds(m_BoardView.ResolveDuration);
             }
@@ -175,8 +190,10 @@ namespace SimulaAd.Bubbles
             {
                 int bonus = m_Board.PopAll();
                 m_Session.Score += bonus * m_Config.PointsPerPop;
-                ShowScorePopups(m_Board.PoppedCells, m_Config.PointsPerPop);
+                BeginClearFeedback();
+                ShowClearFeedback(m_Board.PoppedCells, m_Config.PointsPerPop);
                 RefreshHud();
+                ReportProgress();
                 PlaySound(SoundID.CoinSound);
                 yield return new WaitForSeconds(m_BoardView.ResolveDuration);
             }
@@ -223,7 +240,8 @@ namespace SimulaAd.Bubbles
 
             int popped = m_Board.PopAll();
             m_Session.Score += popped * m_Config.PointsPerPop;
-            ShowScorePopups(m_Board.PoppedCells, m_Config.PointsPerPop);
+            BeginClearFeedback();
+            ShowClearFeedback(m_Board.PoppedCells, m_Config.PointsPerPop);
             RefreshHud();
             PlaySound(SoundID.CoinSound);
             yield return new WaitForSeconds(m_BoardView.ResolveDuration);
@@ -231,14 +249,34 @@ namespace SimulaAd.Bubbles
             StartCoroutine(GameClear());
         }
 
-        /// <summary>One "+points" label on each cell (positions come from the grid, not the animating views).</summary>
-        void ShowScorePopups(List<Vector2Int> cells, int points)
+        /// <summary>Tells the cheer phrases how many bubbles are left (milestones at 80/50/20%).</summary>
+        void ReportProgress()
         {
-            if (m_ScorePopups == null)
-                return;
+            if (m_Cheer != null)
+                m_Cheer.OnBubblesRemaining(m_Board.CountBubbles());
+        }
 
+        /// <summary>Starts a new feedback burst (coins of one clear get staggered delays).</summary>
+        void BeginClearFeedback()
+        {
+            if (m_CoinEffect != null)
+                m_CoinEffect.BeginBurst();
+        }
+
+        /// <summary>
+        /// Per cleared cell: a "+points" label and a coin flying to the score icon
+        /// (positions come from the grid, not the animating views).
+        /// </summary>
+        void ShowClearFeedback(List<Vector2Int> cells, int points)
+        {
             for (int i = 0; i < cells.Count; i++)
-                m_ScorePopups.Show(m_BoardView.CellToWorld(cells[i].x, cells[i].y), points);
+            {
+                Vector3 world = m_BoardView.CellToWorld(cells[i].x, cells[i].y);
+                if (m_ScorePopups != null)
+                    m_ScorePopups.Show(world, points);
+                if (m_CoinEffect != null)
+                    m_CoinEffect.Launch(world);
+            }
         }
 
         void ShowEndCard()

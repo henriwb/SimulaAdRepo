@@ -1,6 +1,11 @@
-# Scrambly Playable — TODO: game title
+# Scrambly Bubble Pop — playable ad
 
-TODO: one-paragraph pitch — core mechanic, progression/ending, and how it connects to Scrambly.
+A short Puzzle Bobble–style bubble shooter built as a Scrambly playable. Drag anywhere to aim (a dotted
+guide and a "ghost" bubble show exactly where the shot will land), release to shoot. Match 4 or more of
+the same color to pop them; bubbles left hanging fall for bonus points. Three special wildcard bubbles
+clear a whole row when popped. Every cleared bubble turns into a coin that flies into the coin counter —
+the "play and earn" loop Scrambly is about — with cheers at 80% / 50% / 20% of the board cleared.
+Clearing the board shows GAME CLEAR, then the End Card with the CTA and a Replay button.
 
 ## Run instructions
 
@@ -23,6 +28,16 @@ under file:// Chrome logs a harmless "Unsafe attempt to load URL … 'file:' URL
 security origins" warning, because the Playworks wrapper uses an internal iframe and file:// gives each
 frame its own origin. Served over HTTP, the warning does not appear.
 
+## How to play
+
+- **Aim:** drag left/right anywhere on the game screen (touch or mouse). The lever arrow, dotted guide
+  (one wall bounce) and ghost bubble follow the aim.
+- **Shoot:** release the drag. A plain tap does not shoot.
+- **Match:** 4+ bubbles of the same color pop (+10 each); disconnected bubbles fall (+20 each).
+- **Special bubble:** wildcard for any color; when popped it clears its whole row.
+- **Win:** clear the board → GAME CLEAR → End Card (CTA, Replay). There is no lose state (short ad session).
+- **Mute:** speaker button, top-left.
+
 ## Package contents
 
 ```
@@ -40,87 +55,114 @@ Toolchain:
 - Visual Studio 2022 Build Tools (MSBuild 17, ".NET desktop build tools") + **.NET Framework 4.7 Targeting Pack**.
   Set the MSBuild path in `luna.json` → `msbuildWin64`.
 
+Required Playworks settings (already in `luna.json`):
+- **Disable Code Stripping ON** (`disableRuntimeAnalysisForCode: true`) — see "Playworks runtime analysis" below.
+- Shader cache off (`useShadersCache: false`).
+
 Steps:
-1. Open `source/` in Unity 6000.0.84f1.
+1. Open `source/` in Unity 6000.0.84f1. Startup scene: `Assets/Game/Shared/Scenes/Boot.unity`.
 2. Playworks window → Upload To Creative Library → **Build And Upload**.
 3. Creative Library → export **Unity Ads** → rename `*_unityads.html` to `index.html`.
 
 Build-time only: the Playworks login/upload is used to produce the HTML. The exported file does not depend on it at runtime.
 
-## Runtime verification (no external requests)
+If a build renders everything pink: close Unity, delete `LunaTemp/`, revert `Assets/SVC_Luna.asset`, rebuild.
 
-TODO (re-run on the final build): served via `python -m http.server`; DevTools → Network shows only `localhost` requests; the playable also runs end-to-end with DevTools Network set to **Offline**.
+## Runtime verification
 
-Note: the exported HTML contains URL strings from Playworks' built-in debug tooling (`stats.js`, `spector.js`, `console.re`). They are never loaded at runtime — see the Network check above. Luna analytics calls were removed from the game code.
+Verified on the final export (headless Chrome, served from a local static HTTP server, 390×844, 320×568 and 844×390):
+- The server received only `GET /index.html` (+ the browser's automatic `/favicon.ico`); no request to any other host.
+- Console (logs forced on in a test copy): no errors.
+
+The exported HTML contains URL strings from Playworks' built-in debug tooling (`stats.js`, `spector.js`,
+`console.re`) and the Unity Ads wrapper's store-link code. None of them is loaded or called at runtime (see above).
+Luna analytics calls and `InstallFullGame()` were removed from the game code.
+
+Suggested manual check: DevTools → Network → reload: only `localhost`; then set Network to **Offline** and play a full run.
 
 ## Requirements checklist
 
 | Requirement | Status / implementation |
 |---|---|
-| Touch + mouse | Drag horizontally anywhere on the game UI to aim, release to shoot (EventSystem drag → `SwipeInputView`). A drag cut by focus loss is cancelled, not fired. TODO: verify on device |
-| Portrait 320×568 / 390×844 | Game UI lives in a fixed 390×844 design frame scaled to fit (`PortraitFrameView`). TODO: verify both sizes |
-| Other orientation (adapt or rotate prompt) | Both: landscape is pillarboxed and playable (desktop); on touch devices in landscape a "rotate your device" prompt pauses the game, with a "Play anyway" option (`OrientationController`). TODO: verify 844×390 / 568×320 |
-| No page scroll competing with gameplay | TODO |
-| CTA: local "CTA clicked — demo only" + console log, no navigation | `EndCardController.ClickCTA` (verify console log in the web build) |
-| Pause gameplay/clocks while hidden, resume without time jumps | Playworks dispatches `luna:pause`/`luna:resume` on `visibilitychange`; gameplay and animations also use a clamped delta (`SafeTime`, max 0.05 s/frame) so the first frame after resuming can't jump. TODO: verify by hiding the tab mid-shot |
-| Audio: starts after interaction, mute, silent while hidden | Sound effects only (shot, pop, clear), all triggered by player actions; mute button (`MuteController` → `AudioManager.EnableSfx/EnableMusic`, persisted). TODO: verify silence while hidden |
-| Restart resets cleanly (no duplicate timers/listeners/effects) | Replay → `ResetGame()` (in-place reset, hides End Card); TODO: verify 4× replays |
-| Resize / interrupted input handling | TODO |
-| ZIP ≤ 5,000,000 bytes | TODO: final size in bytes |
+| Understandable, responsive interaction | Drag anywhere to aim with live guide + ghost bubble; release to shoot; immediate pop/score/coin feedback |
+| Purposeful progression, clear ending | Board clearing with milestone cheers (80/50/20%) → GAME CLEAR → End Card (CTA + Replay) |
+| Connection to Scrambly | Cleared bubbles become coins flying into the coin counter ("play and earn"); End Card CTA |
+| Touch + mouse | UGUI EventSystem drag (`SwipeInputView`) works for both; a drag cut by focus loss is cancelled, not fired |
+| Portrait 320×568 / 390×844 | Primary orientation. CanvasScaler reference 390×844, Expand (`OrientationCanvasScaler`); board sized from a fixed design width |
+| Other orientation | **Adapts** (no rotate prompt): landscape uses its own layout for the play area (`OrientationLayoutView`) and a 844×390 CanvasScaler reference so UI keeps the same on-screen size; bubbles ×0.7 in landscape |
+| No page scroll competing with gameplay | Playworks wrapper: full-screen canvas, `user-scalable=no`, `overflow: hidden` |
+| CTA | Explicit click → on-screen "CTA clicked — demo only" + `console.log`; no navigation (`EndCardController.ClickCTA`) |
+| Pause while hidden, resume without time jumps | Playworks dispatches `luna:pause`/`luna:resume` on `visibilitychange`; gameplay and animations use a clamped delta (`SafeTime`, max 0.05 s per frame), so the first frame after resuming can't jump |
+| Audio | Effects only (shot, pop, clear), all triggered by player actions (never before interaction); mute button (`MuteController`) that skips playing effects and zeroes `AudioListener.volume`; silenced while hidden through `luna:pause` |
+| Resize / interrupted input | Board re-lays out whenever the play area changes size/orientation (checked each frame); drag state cleared on focus loss; End Card blocks game input while open |
+| Outcomes used | Win only (board cleared); no timer, no lose state |
+| Restart without duplicates | Replay = in-place reset (`GameLoopController.ResetGame`): stops coroutines, cancels an in-flight shot, returns bubbles/coins/popups to their pools, resets cheers and End Card; listeners are registered once |
+| ZIP ≤ 5,000,000 bytes | index.html: 2,175,361 bytes; the ZIP adds only this README and the game's source code |
 
 ## Testing
 
-| Browser / device | Real or emulated | Result |
-|---|---|---|
-| TODO | TODO | TODO |
+| Browser / device | Real or emulated | What was checked | Result |
+|---|---|---|---|
+| Unity Editor (Game view 390×844, 320×568, 844×390, 568×320) | Emulated | Full loop, special bubbles, coins, cheers, replay, End Card, mute, layouts in both orientations | OK |
+| Chrome (Windows desktop), mouse | Real | Full loop in the web build, End Card, mute | OK |
+| Smartphone, mobile browser (web build) | Real | Touch drag-to-aim/release-to-shoot, portrait and landscape, full loop, End Card, mute | OK |
+| Browser at several resolutions (portrait and landscape) | Emulated | Layout and scaling of the play area and UI | OK |
+| Chrome headless, 844×390 / 390×844 / 320×568 | Emulated | Load, console errors, network requests | OK (headless Chrome enforces a ~500 px minimum viewport, so its portrait screenshots are clipped; portrait layout was checked on the phone and in the other resolution tests) |
 
-Edge cases tested: TODO (e.g. hide tab mid-run, restart 4× in a row, rotate mid-run, release touch outside the canvas).
+Edge cases covered by the implementation: hiding the tab mid-shot (clamped delta, no jump on return), repeated replays (pooled objects and listeners registered once), rotating mid-run (layout re-applied every frame it changes), releasing the drag outside the canvas or losing focus (drag cancelled), mute before shooting (effects skipped).
 
 ## Known limitations
 
-- TODO
-- Additive scene loading (`LoadSceneAsync`/`UnloadSceneAsync` with `LoadSceneMode.Additive`) worked in the Editor but hung in the Playworks web build, so the game runs as a single scene.
+- No lose state (by design, short ad session); the first board of each page load is the same (fixed random seed — `UnityEngine.Random` is unavailable in the Playworks runtime); replays vary.
+- Mute lasts for the current session only (no saved settings).
+- On small phones in landscape (e.g. 568×320) the play area is small; portrait is the intended orientation.
+- The Playworks simulator shows no CTA event: the CTA intentionally does not call `InstallFullGame()` (brief: local confirmation, no navigation).
+- Console logs appear only if DevTools is open before the page loads (Playworks wrapper behavior).
+- Single scene: additive scene loading worked in the Editor but hung in the web build.
 
 ## Untested / unfinished
 
-- TODO
+- Safari and Firefox were not tested.
+- Audio silence while the tab is hidden relies on the Playworks `luna:pause` event; resume timing was not measured with instruments.
 
 ## Project note
 
 ### Tools, AI and reused work
-- **Unity 6 + Unity Playworks Plugin** (Unity's official playable-ad tool) to write the game in C# and export an HTML5 playable.
-- **Unity Playworks tutorial project** (Luna) as the starting project; reused: TODO (e.g. End Card prefab/controller).
-- **Claude Code (AI)**: TODO — what it was used for (e.g. toolchain diagnosis, build-log analysis, code review, boilerplate).
-- Libraries: DOTween, Newtonsoft.Json (Playworks-supported JSON), TextMesh Pro.
+- **Unity 6 + Unity Playworks Plugin** (Unity's official playable-ad tool): game written in C#, exported as a single-file HTML5 playable.
+- **Unity Playworks tutorial project** as the starting project. Reused: End Card prefab/controller, AudioManager, the idea and scene objects of `CoinEffectManager` and `CheerPhraseController` (both rewritten), DOTween/TextMesh Pro setup, UI art kit.
+- **Claude Code (AI assistant)**: toolchain setup and diagnosis (Unity version, MSBuild, .NET targeting pack, Playworks settings), build-log and runtime debugging of the web export (headless Chrome, forced-on logs, reading the generated JavaScript), implementation of the MVC scripts under my direction, and this README.
+- Libraries: DOTween (tutorial UI only), Newtonsoft.Json (Playworks-supported JSON), TextMesh Pro.
 
 ### What I contributed
-TODO
+Game concept and design (bubble shooter for a rewards app, drag-to-aim/release-to-shoot, special wildcard bubbles, coin feedback, milestone cheers, no lose state), the architecture rules (strict MVC, no static state, in-place replay), scene and UI layout for both orientations, art and sprite choices, all Editor, browser and phone testing, and every accept/reject decision on the AI's proposals.
 
 ### Decisions, corrections and rejected outputs
-- **Engine choice:** kept Unity (my strongest tool) and used Playworks to meet the HTML5 / single-file / ≤5 MB / offline constraints instead of a raw Unity WebGL build.
-- **Unity 6.3 → 6.0 LTS:** 6.3 is unsupported by the Playworks exporter; downgraded to the supported LTS.
-- **Rejected: additive boot scene.** A GameBoot scene loading/unloading the gameplay scene additively worked in the Editor but hung in the web build; reverted to a single scene with an in-scene state reset for replay.
-- **Replay leak fix:** tutorial events are ScriptableObjects that outlive scene reloads; listeners that never unsubscribed kept calling destroyed objects (`MissingReferenceException`). Added `RemoveListener` in `OnDestroy`.
-- **Layout timing in the web build:** bubbles sized from the puzzle area width in `Awake` rendered at size 0 in the Playworks build (canvas sized later, `OnRectTransformDimensionsChange` not relied on). `BoardView` now also re-lays out whenever the area width changes (checked in `LateUpdate`).
-- **Web-only startup crash (found by patching a copy of the export so Playworks shows logs):** a debug log using a C# custom numeric format (`{x:0.#}`) threw in the Playworks runtime (`Bridge.Int.customFormat`), aborting `GameLoopController.Awake` — no board, no input. Also `DOJumpAnchorPos` threw from its internal `OnUpdate` callback; replaced with a `DOAnchorPosY` yoyo. Next build: `foreach` over `Dictionary.Values` threw (`moveNext` of undefined) and `UnityEngine.Random` turned out to be missing at runtime altogether (`Random.value` and `Random.Range` both fail) — the board now uses a plain array, game code uses index `for` loops only, and randomness comes from a small own generator (`RandomSource`, Park–Miller LCG in double math, one instance per consumer). Its first version seeded from `DateTime.Now` inside MonoBehaviour field initializers and the build loaded to a black screen (`System.DateTime.getMillisecond is not a function` during scene construction); it now uses fixed seeds and is created lazily (first run is deterministic, replays continue the sequence).
-- **Actual root cause — Playworks runtime analysis:** with `disableRuntimeAnalysisForCode: false`, Playworks records which engine methods ran in a previous run and strips the rest (`luna.json` → `unusedMethods`/`unusedClasses`, `"excluded": true`). Early-crashing builds marked methods the game does use as unused (e.g. `Image.sprite` setter), so each build stripped what the next one needed. Runtime analysis for code was disabled and the 6,386 stale exclusions reset; the workarounds below were kept as they are harmless and more robust.
-- **End Card buttons unclickable in the web build:** all canvases had sort order 0; the Playworks runtime resolved the tie differently from the Editor and the game canvas's full-screen images swallowed the clicks. Fix: the End Card canvas gets a higher sort order, and the game canvas's `GraphicRaycaster` is disabled while the End Card is shown (re-enabled on replay).
-- **Root pattern behind the web-only failures:** the Playworks runtime renames some Bridge.NET `Int` helpers (`format`, `customFormat`, `trunc`, `clip32`, …) but generated game code still calls them by name — so float→int casts, `string.Format` with numbers and custom numeric formats fail at runtime. The game code avoids them (float comparisons, `ToString()` + `Replace`). DOTween also behaved differently (loops/yoyo ran endlessly), so all new animations (bubble pop/drop, score popups, mascot) are hand-written in `Update`, following the "only use what the tutorial runner proved works" rule.
-- **Playworks API gaps found:** `JsonUtility` (replaced with Newtonsoft.Json) and `AudioListener.pause` (compile error in the web build).
-- **Broken shaders (all pink):** a failed build left the Playworks shader cache empty (`shaders.json` = `[]`); fixed by clearing `LunaTemp/` and reverting `SVC_Luna.asset`. It recurred once, so the shader cache was disabled (`luna.json` → `useShadersCache: false`): slower builds, but shaders are recompiled every time.
-- **Game: Puzzle Bobble–style bubble shooter** built entirely in UI (RectTransforms, no physics): circle math in the puzzle area's local space, so it is deterministic and Playworks-safe. Hex offset-row grid; views re-layout from the area width on resize/rotation.
-- **Strict MVC, no static state:** Models are data only (`BubbleGameConfig`, `BubbleGridModel`, `GameSessionModel`); grid rules (clusters, floating bubbles, landing cell) live in `BoardController`; Views only draw and forward input; `GameLoopController` is the composition root wired by serialized references.
-- **Aim guide from the real flight code:** `TrajectoryController` holds the step/bounce/contact rules used by both the shot and the preview, so the dotted guide (1 wall bounce, like Puzzle Bobble) and the ghost bubble on the landing cell can't disagree with the actual shot. Dots are pooled UI Images (LineRenderer doesn't render in a UI Canvas; a custom mesh Graphic was avoided as a Playworks risk). Recomputed only on aim change, board change or resize.
-- **Score feedback:** each popped/dropped bubble spawns a pooled "+points" TextMeshProUGUI at its cell that pops in, wobbles, cycles rainbow colors, rises and fades (`ScorePopupView`, hand-animated, ticked by `GameLoopController`); popups are cleared on replay.
-- **Per-orientation layouts without duplicating systems:** `OrientationLayoutView` copies a landscape placeholder's RectTransform (anchors, position, size) onto the live element while the screen is landscape. The board stays one `BoardView` with a fixed design width, so bubbles keep a consistent size across layouts (landscape applies a 0.7 multiplier to fit the shorter screen); the grid centers in a wider area and the shot bounces off the grid's edges, not the area's.
-- **Same on-screen size in both orientations:** `OrientationCanvasScaler` swaps the CanvasScaler reference (390×844 ↔ 844×390, Expand), so e.g. 390×844 and 844×390 both render at scale 1.0 instead of landscape shrinking the whole UI to ~46%.
-- **Orientation:** portrait-first. A rotate-only prompt was rejected because reviewers on desktop can't rotate a monitor; instead the portrait frame is pillarboxed in landscape (always playable), and the rotate prompt appears only on touch devices. Swipe distance is measured against the frame width so aiming feels the same in both orientations.
-- **Special bubbles (bonus):** 3 wildcard bubbles are placed at random on the starting board. They count as any color in a match; when one pops it clears its whole row (the resulting floating bubbles drop for extra points). If only specials remain, they pop automatically so the board can always be cleared.
-- **Always winnable:** the next bubble is drawn only from colors still on the board; no lose state (short ad session).
-- **Replay = in-place state reset** (`GameLoopController.ResetGame`), not a scene reload: stops coroutines, cancels an in-flight shot, returns every bubble to the pool, hides the End Card (a GameObject toggled with `SetActive`).
-- **CTA follows the brief, not the ad network flow:** `Luna.Unity.Playable.InstallFullGame()` (the tutorial's CTA) logs a Playworks CTA event but, outside an ad network (no MRAID), calls `window.open(storeLink)` — navigating away and making an external request. It was replaced by a local "CTA clicked — demo only" confirmation + console log, so the Playworks simulator no longer shows a CTA event by design.
-- **End Card fixes:** CTA listener registered once (it was added on every open → duplicate clicks after replay); CTA shows a local "CTA clicked — demo only" message + console log instead of `InstallFullGame()`; removed `LifeCycle.GameEnded()`.
-- TODO: decisions made during the 6-hour session.
+
+**Design**
+- **Engine:** kept Unity (my strongest tool) and used Playworks to meet the single-file / ≤5 MB / offline HTML5 constraints instead of a raw Unity WebGL build.
+- **Puzzle Bobble–style shooter built entirely in UI** (RectTransforms, no physics): circle math in the play area's local space — deterministic and Playworks-safe. Hex offset-row grid.
+- **Strict MVC, no static state:** Models are data only (`BubbleGameConfig`, `BubbleGridModel`, `GameSessionModel`); grid rules live in `BoardController`; Views only draw and forward input; `GameLoopController` is the composition root wired by serialized references.
+- **Always winnable:** the next bubble is drawn only from colors still on the board; no lose state.
+- **Aim guide from the real flight code:** `TrajectoryController` holds the step/bounce/contact rules used by both the shot and the preview, so the dotted guide and ghost bubble can't disagree with the actual shot.
+- **Input changed during development:** a circular lever and a Shoot button were replaced by "drag anywhere to aim, release to shoot".
+- **Special bubbles:** 3 wildcards per board; they count as any color and clear their row; if only specials remain they pop automatically so the board can always be cleared.
+- **Juice:** "+points" labels (pop-in, wobble, rainbow, rise, fade), coins arcing into the counter with a punch on arrival, milestone cheers (pop, flash, wobble, 2 s), a mascot that hops idly and jumps on each shot.
+- **Orientation:** portrait-first. A rotate-only prompt was rejected (reviewers on desktop can't rotate a monitor); landscape adapts instead, with the same on-screen UI size (swapped CanvasScaler reference) and its own play-area layout.
+- **Replay = in-place state reset**, not a scene reload.
+- **CTA follows the brief, not the ad-network flow:** `InstallFullGame()` would log a Playworks CTA event but, without MRAID, calls `window.open(storeLink)` (navigation + external request). Replaced by a local confirmation + console log.
+
+**Engineering (Playworks web runtime)**
+- **Unity 6.3 → 6.0 LTS:** 6.3 is unsupported by the Playworks exporter.
+- **Rejected: additive boot scene** (GameBoot loading/unloading the gameplay scene): worked in the Editor, hung in the web build.
+- **Playworks runtime analysis (root cause of most web-only failures):** with code stripping by runtime analysis on, Playworks removes engine methods that didn't run in a previous session. Early-crashing builds marked used methods as unused (e.g. the `Image.sprite` setter, integer-cast helpers, `UnityEngine.Random`), so each build stripped what the next one needed. Fixed by turning on "Disable Code Stripping" and resetting 6,386 stale exclusions in `luna.json`.
+- **How it was found:** the export hides console logs unless DevTools is open, so I ran a patched copy with logs forced on in headless Chrome and mapped obfuscated names (e.g. `zzb$` → `Bridge.Int.customFormat`) through the engine's name maps.
+- **Web-safe code rules kept afterwards (harmless and more robust):** no custom numeric formats or `string.Format` with numbers, no float→int casts, index `for` loops instead of `foreach`, plain arrays instead of `Dictionary` enumeration, own `RandomSource` (Park–Miller LCG, fixed seeds, created lazily — seeding from `DateTime.Now` in field initializers caused a black-screen load), and hand-written animations instead of DOTween loops/yoyo (which ran endlessly in the web build).
+- **Layout timing:** bubbles sized in `Awake` rendered at size 0 on the web (canvas sized later) → `BoardView` re-lays out whenever the play area changes.
+- **End Card buttons unclickable on the web:** all canvases had sort order 0 and the web runtime resolved the tie differently → the game canvas's raycaster is disabled while the End Card is open, and the End Card canvas sorts above.
+- **Mute not muting on the web:** `AudioSource.mute` wasn't honored for `PlayOneShot` → effects are skipped while muted and `AudioListener.volume` is zeroed.
+- **Replay leak (tutorial code):** ScriptableObject events outlived scene reloads and kept calling destroyed listeners → `RemoveListener` in `OnDestroy`.
+- **Pink shaders:** an interrupted build left the Playworks shader cache empty → cache cleared and disabled.
+- **API gaps:** `JsonUtility` (→ Newtonsoft.Json), `AudioListener.pause` (compile error in the web build).
 
 ### Time spent
-TODO (environment setup and pipeline validation were done before the timed session).
+Covered in the walkthrough video. Environment setup and Playworks pipeline validation were done before the timed session.

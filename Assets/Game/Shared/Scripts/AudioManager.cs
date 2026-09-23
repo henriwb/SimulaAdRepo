@@ -31,6 +31,10 @@ namespace HyperCasual.Runner
         [SerializeField]
         SoundIDClipPair[] m_Sounds;
 
+        [Tooltip("Master volume at startup (no saved settings: the playable has no SaveManager).")]
+        [Range(0f, 1f)]
+        [SerializeField] float m_StartVolume = 1f;
+
         float m_LastSoundPlayTime;
         readonly Dictionary<SoundID, AudioClip> m_Clips = new Dictionary<SoundID, AudioClip>();
 
@@ -45,6 +49,7 @@ namespace HyperCasual.Runner
             {
                 m_AudioSettings.EnableMusic = value;
                 m_MusicSource.mute = !value;
+                // (The playable plays no music; PlayMusic also refuses to start while muted.)
             }
         }
         
@@ -58,6 +63,9 @@ namespace HyperCasual.Runner
             {
                 m_AudioSettings.EnableSfx = value;
                 m_EffectSource.mute = !value;
+
+                // Second layer for the web build: silence the listener while muted.
+                AudioListener.volume = value ? m_AudioSettings.MasterVolume : 0f;
             }
         }
 
@@ -70,7 +78,7 @@ namespace HyperCasual.Runner
             set
             {
                 m_AudioSettings.MasterVolume = value;
-                AudioListener.volume = value;
+                AudioListener.volume = m_AudioSettings.EnableSfx ? value : 0f;
             }
         }
 
@@ -82,38 +90,18 @@ namespace HyperCasual.Runner
             }
         }
 
+        // No persistence (the tutorial's SaveManager was removed): every session starts with sound on;
+        // the mute button (MuteController) toggles EnableSfx/EnableMusic for the current session.
         void OnEnable()
         {
-            if (SaveManager.Instance == null)
-            {
-                // Disable music, enable sfx, and 
-                // set volume to a very low amount
-                // in the LevelEditor
-                EnableMusic = false;
-                EnableSfx = true;
-                MasterVolume = 0.2f;
-                return;
-            }
-
-            var audioSettings = SaveManager.Instance.LoadAudioSettings();
-            EnableMusic = audioSettings.EnableMusic;
-            EnableSfx = audioSettings.EnableSfx;
-            MasterVolume = audioSettings.MasterVolume;
-        }
-        
-        void OnDisable()
-        {
-            if (SaveManager.Instance == null)
-            {
-                return;
-            }
-
-            SaveManager.Instance.SaveAudioSettings(m_AudioSettings);
+            EnableMusic = m_AudioSettings.EnableMusic;
+            EnableSfx = m_AudioSettings.EnableSfx;
+            MasterVolume = m_StartVolume;
         }
 
         void PlayMusic(AudioClip audioClip, bool looping = true)
         {
-            if (m_MusicSource.isPlaying)
+            if (m_MusicSource.isPlaying || !m_AudioSettings.EnableMusic)
                 return;
             
             m_MusicSource.clip = audioClip;
@@ -141,6 +129,11 @@ namespace HyperCasual.Runner
 
         void PlayEffect(AudioClip audioClip)
         {
+            // Muted: don't play at all. AudioSource.mute is not honored by PlayOneShot in the
+            // Playworks web runtime, so skipping the call is the reliable mute.
+            if (!m_AudioSettings.EnableSfx)
+                return;
+
             if (Time.time - m_LastSoundPlayTime >= MinSoundInterval)
             {
                 m_EffectSource.PlayOneShot(audioClip);

@@ -5,8 +5,8 @@ namespace SimulaAd.Bubbles
 {
     /// <summary>
     /// Mute toggle required by the brief: switches all game audio (effects and music) on/off
-    /// through the existing AudioManager and keeps the button icon in sync. The AudioManager
-    /// persists the choice in PlayerPrefs. Controller.
+    /// through the existing AudioManager and keeps the button icon in sync, for the current session
+    /// (no saved settings). Controller.
     /// </summary>
     public class MuteController : MonoBehaviour
     {
@@ -15,7 +15,7 @@ namespace SimulaAd.Bubbles
 
         void Start()
         {
-            // Start, not Awake: AudioManager loads the saved settings in its OnEnable.
+            // Start, not Awake: AudioManager applies its startup settings in OnEnable.
             m_View.Clicked += OnClicked;
             m_View.SetMuted(IsMuted());
         }
