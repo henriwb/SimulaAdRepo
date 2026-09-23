@@ -15,6 +15,9 @@ The build is a single self-contained file (`index.html`) with no external reques
    `http://<your-PC-IP>:8000` from a phone on the same network
    (start the server with `python -m http.server 8000 --bind 0.0.0.0`).
 
+**Console logs (CTA click):** the Playworks wrapper suppresses `console.log` while DevTools is closed.
+Open DevTools (F12 → Console) *before* loading the page, then click the CTA to see `CTA clicked — demo only`.
+
 Opening `index.html` directly (file://) also runs the game, but a static server is the intended setup:
 under file:// Chrome logs a harmless "Unsafe attempt to load URL … 'file:' URLs are treated as unique
 security origins" warning, because the Playworks wrapper uses an internal iframe and file:// gives each
@@ -59,8 +62,8 @@ Note: the exported HTML contains URL strings from Playworks' built-in debug tool
 | Other orientation (adapt or rotate prompt) | Both: landscape is pillarboxed and playable (desktop); on touch devices in landscape a "rotate your device" prompt pauses the game, with a "Play anyway" option (`OrientationController`). TODO: verify 844×390 / 568×320 |
 | No page scroll competing with gameplay | TODO |
 | CTA: local "CTA clicked — demo only" + console log, no navigation | `EndCardController.ClickCTA` (verify console log in the web build) |
-| Pause gameplay/clocks while hidden, resume without time jumps | TODO |
-| Audio: starts after interaction, mute, silent while hidden | TODO (or "no audio") |
+| Pause gameplay/clocks while hidden, resume without time jumps | Playworks dispatches `luna:pause`/`luna:resume` on `visibilitychange`; gameplay and animations also use a clamped delta (`SafeTime`, max 0.05 s/frame) so the first frame after resuming can't jump. TODO: verify by hiding the tab mid-shot |
+| Audio: starts after interaction, mute, silent while hidden | Sound effects only (shot, pop, clear), all triggered by player actions; mute button (`MuteController` → `AudioManager.EnableSfx/EnableMusic`, persisted). TODO: verify silence while hidden |
 | Restart resets cleanly (no duplicate timers/listeners/effects) | Replay → `ResetGame()` (in-place reset, hides End Card); TODO: verify 4× replays |
 | Resize / interrupted input handling | TODO |
 | ZIP ≤ 5,000,000 bytes | TODO: final size in bytes |
@@ -101,6 +104,7 @@ TODO
 - **Layout timing in the web build:** bubbles sized from the puzzle area width in `Awake` rendered at size 0 in the Playworks build (canvas sized later, `OnRectTransformDimensionsChange` not relied on). `BoardView` now also re-lays out whenever the area width changes (checked in `LateUpdate`).
 - **Web-only startup crash (found by patching a copy of the export so Playworks shows logs):** a debug log using a C# custom numeric format (`{x:0.#}`) threw in the Playworks runtime (`Bridge.Int.customFormat`), aborting `GameLoopController.Awake` — no board, no input. Also `DOJumpAnchorPos` threw from its internal `OnUpdate` callback; replaced with a `DOAnchorPosY` yoyo. Next build: `foreach` over `Dictionary.Values` threw (`moveNext` of undefined) and `UnityEngine.Random` turned out to be missing at runtime altogether (`Random.value` and `Random.Range` both fail) — the board now uses a plain array, game code uses index `for` loops only, and randomness comes from a small own generator (`RandomSource`, Park–Miller LCG in double math, one instance per consumer). Its first version seeded from `DateTime.Now` inside MonoBehaviour field initializers and the build loaded to a black screen (`System.DateTime.getMillisecond is not a function` during scene construction); it now uses fixed seeds and is created lazily (first run is deterministic, replays continue the sequence).
 - **Actual root cause — Playworks runtime analysis:** with `disableRuntimeAnalysisForCode: false`, Playworks records which engine methods ran in a previous run and strips the rest (`luna.json` → `unusedMethods`/`unusedClasses`, `"excluded": true`). Early-crashing builds marked methods the game does use as unused (e.g. `Image.sprite` setter), so each build stripped what the next one needed. Runtime analysis for code was disabled and the 6,386 stale exclusions reset; the workarounds below were kept as they are harmless and more robust.
+- **End Card buttons unclickable in the web build:** all canvases had sort order 0; the Playworks runtime resolved the tie differently from the Editor and the game canvas's full-screen images swallowed the clicks. Fix: the End Card canvas gets a higher sort order, and the game canvas's `GraphicRaycaster` is disabled while the End Card is shown (re-enabled on replay).
 - **Root pattern behind the web-only failures:** the Playworks runtime renames some Bridge.NET `Int` helpers (`format`, `customFormat`, `trunc`, `clip32`, …) but generated game code still calls them by name — so float→int casts, `string.Format` with numbers and custom numeric formats fail at runtime. The game code avoids them (float comparisons, `ToString()` + `Replace`). DOTween also behaved differently (loops/yoyo ran endlessly), so all new animations (bubble pop/drop, score popups, mascot) are hand-written in `Update`, following the "only use what the tutorial runner proved works" rule.
 - **Playworks API gaps found:** `JsonUtility` (replaced with Newtonsoft.Json) and `AudioListener.pause` (compile error in the web build).
 - **Broken shaders (all pink):** a failed build left the Playworks shader cache empty (`shaders.json` = `[]`); fixed by clearing `LunaTemp/` and reverting `SVC_Luna.asset`. It recurred once, so the shader cache was disabled (`luna.json` → `useShadersCache: false`): slower builds, but shaders are recompiled every time.
@@ -113,6 +117,7 @@ TODO
 - **Orientation:** portrait-first. A rotate-only prompt was rejected because reviewers on desktop can't rotate a monitor; instead the portrait frame is pillarboxed in landscape (always playable), and the rotate prompt appears only on touch devices. Swipe distance is measured against the frame width so aiming feels the same in both orientations.
 - **Always winnable:** the next bubble is drawn only from colors still on the board; no lose state (short ad session).
 - **Replay = in-place state reset** (`GameLoopController.ResetGame`), not a scene reload: stops coroutines, cancels an in-flight shot, returns every bubble to the pool, hides the End Card (a GameObject toggled with `SetActive`).
+- **CTA follows the brief, not the ad network flow:** `Luna.Unity.Playable.InstallFullGame()` (the tutorial's CTA) logs a Playworks CTA event but, outside an ad network (no MRAID), calls `window.open(storeLink)` — navigating away and making an external request. It was replaced by a local "CTA clicked — demo only" confirmation + console log, so the Playworks simulator no longer shows a CTA event by design.
 - **End Card fixes:** CTA listener registered once (it was added on every open → duplicate clicks after replay); CTA shows a local "CTA clicked — demo only" message + console log instead of `InstallFullGame()`; removed `LifeCycle.GameEnded()`.
 - TODO: decisions made during the 6-hour session.
 

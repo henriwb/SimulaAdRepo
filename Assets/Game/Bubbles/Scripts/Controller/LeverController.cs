@@ -42,6 +42,14 @@ namespace SimulaAd.Bubbles
             m_Input.SwipeEnded -= OnSwipeEnded;
         }
 
+        /// <summary>Enables/disables game input (off while the End Card is shown).</summary>
+        public void SetInputEnabled(bool enabled)
+        {
+            if (!enabled)
+                m_Dragging = false;
+            m_Input.SetInputEnabled(enabled);
+        }
+
         public void ResetAim()
         {
             m_Dragging = false;

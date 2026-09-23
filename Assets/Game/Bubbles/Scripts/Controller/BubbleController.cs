@@ -5,7 +5,8 @@ namespace SimulaAd.Bubbles
 {
     /// <summary>
     /// Flies a shot bubble using <see cref="TrajectoryController"/> (same rules as the aim guide)
-    /// and reports where it lands. Uses Time.deltaTime, so pausing time pauses the shot.
+    /// and reports where it lands. Uses clamped scaled time (SafeTime), so pausing time pauses the
+    /// shot and resuming never jumps it ahead.
     /// Controller: initialized by <see cref="GameLoopController"/>.
     /// </summary>
     public class BubbleController : MonoBehaviour
@@ -56,7 +57,8 @@ namespace SimulaAd.Bubbles
             if (m_Flying == null)
                 return;
 
-            float remaining = m_Config.ShotSpeed * m_BoardView.Diameter * Time.deltaTime;
+            // Clamped delta: no jump when resuming from a hidden tab.
+            float remaining = m_Config.ShotSpeed * m_BoardView.Diameter * SafeTime.Delta;
             float maxStep = m_Trajectory.MaxStep;
 
             while (remaining > 0f)

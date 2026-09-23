@@ -347,9 +347,16 @@ public class EndCardController : MonoBehaviour
         _buttonRect.pivot = new Vector2(buttonPositionX, buttonPositionY);
     }
 
+    int _lastCtaFrame = -1;
+
     // Demo build: confirm locally instead of Luna.Unity.Playable.InstallFullGame() (no navigation).
+    // The prefab also has persistent OnClick → ClickCTA calls; one click = one log.
     public void ClickCTA()
     {
+        if (Time.frameCount == _lastCtaFrame)
+            return;
+        _lastCtaFrame = Time.frameCount;
+
         Debug.Log("CTA clicked — demo only");
         if (_ctaConfirmation != null)
             _ctaConfirmation.SetActive(true);

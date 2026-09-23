@@ -56,7 +56,7 @@ namespace SimulaAd.Bubbles
 
         void Update()
         {
-            float deltaTime = Time.deltaTime;
+            float deltaTime = SafeTime.Delta;
 
             if (m_Jumping)
             {

@@ -61,9 +61,11 @@ namespace SimulaAd.Bubbles
                 m_EndCardController = m_EndCard.GetComponentInChildren<EndCardController>(true);
 
                 // The Replay button lives inside the End Card prefab, which can't reference scene objects.
-                RunRestarter[] restarters = m_EndCard.GetComponentsInChildren<RunRestarter>(true);
-                for (int i = 0; i < restarters.Length; i++)
-                    restarters[i].Initialize(this);
+                // Singular lookup (same call that finds the EndCardController); RunRestarter also
+                // self-resolves if this injection doesn't happen.
+                RunRestarter restarter = m_EndCard.GetComponentInChildren<RunRestarter>(true);
+                if (restarter != null)
+                    restarter.Initialize(this);
             }
 
             m_Lever.ShotReleased += OnShotReleased;
@@ -91,7 +93,7 @@ namespace SimulaAd.Bubbles
         {
             // Score popups animate by hand; their view may sit on an inactive template (no Update of its own).
             if (m_ScorePopups != null)
-                m_ScorePopups.Tick(Time.deltaTime);
+                m_ScorePopups.Tick(SafeTime.Delta);
         }
 
         /// <summary>Starts a fresh run in place: new board, score 0, aim centered, no pending timers, End Card hidden.</summary>
@@ -105,6 +107,7 @@ namespace SimulaAd.Bubbles
                 m_Mascot.ResetPose();
             m_Board.Generate();
             m_Lever.ResetAim();
+            m_Lever.SetInputEnabled(true);
 
             m_Session.Score = 0;
             m_Session.CurrentColor = PickColor();
@@ -234,6 +237,9 @@ namespace SimulaAd.Bubbles
                 Debug.LogWarning($"[{nameof(GameLoopController)}] End Card not assigned.");
                 return;
             }
+
+            // Game canvas stops receiving clicks so only the End Card buttons (CTA, Replay) get them.
+            m_Lever.SetInputEnabled(false);
 
             // Activating first runs EndCardController.Awake (registers the CTA) before opening.
             // Deactivating on ResetGame resets its Animator, so every open animates in again.

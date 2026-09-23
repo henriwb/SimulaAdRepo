@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace SimulaAd.Bubbles
 {
@@ -17,6 +18,20 @@ namespace SimulaAd.Bubbles
         [SerializeField] RectTransform m_WidthReference;
 
         readonly Vector3[] m_Corners = new Vector3[4];
+        GraphicRaycaster m_Raycaster;
+
+        /// <summary>
+        /// Turns the game canvas's raycasting on/off. Off while the End Card is up: with equal
+        /// canvas sort orders the Playworks runtime can hit the game canvas's full-screen images
+        /// first, swallowing clicks meant for the End Card buttons.
+        /// </summary>
+        public void SetInputEnabled(bool enabled)
+        {
+            if (m_Raycaster == null)
+                m_Raycaster = GetComponent<GraphicRaycaster>();
+            if (m_Raycaster != null)
+                m_Raycaster.enabled = enabled;
+        }
 
         /// <summary>A drag started.</summary>
         public event Action SwipeStarted;

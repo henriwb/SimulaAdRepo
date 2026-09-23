@@ -120,7 +120,7 @@ namespace SimulaAd.Bubbles
             if (m_Animation == Animation.None)
                 return;
 
-            m_Elapsed += Time.deltaTime;
+            m_Elapsed += SafeTime.Delta;
             float t = m_Elapsed / m_Duration;
             if (t > 1f)
                 t = 1f;
