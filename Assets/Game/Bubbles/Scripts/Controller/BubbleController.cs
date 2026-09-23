@@ -20,6 +20,7 @@ namespace SimulaAd.Bubbles
         int m_FlyingColor;
         Vector2 m_Position;
         Vector2 m_Direction;
+        float m_FlightTime;
         Action<Vector2Int, int, BubbleView> m_OnLanded;
 
         public void Initialize(BubbleGameConfig config, BoardView boardView, BoardController board, TrajectoryController trajectory)
@@ -37,6 +38,7 @@ namespace SimulaAd.Bubbles
 
             m_Direction = m_Trajectory.AimDirection(aimDegrees);
             m_Position = origin;
+            m_FlightTime = 0f;
             m_FlyingColor = color;
             m_OnLanded = onLanded;
             m_Flying = m_BoardView.SpawnFlying(color, origin);
@@ -58,7 +60,15 @@ namespace SimulaAd.Bubbles
                 return;
 
             // Clamped delta: no jump when resuming from a hidden tab.
-            float remaining = m_Config.ShotSpeed * m_BoardView.Diameter * SafeTime.Delta;
+            float deltaTime = SafeTime.Delta;
+            m_FlightTime += deltaTime;
+
+            // Acceleration (deterministic): ease-in from the start speed to the top speed.
+            // Only the speed changes, not the path, so the aim guide stays exact.
+            float accel = m_Config.ShotAccelerationTime > 0f ? Mathf.Clamp01(m_FlightTime / m_Config.ShotAccelerationTime) : 1f;
+            float speedFactor = Mathf.Lerp(m_Config.ShotStartSpeedFactor, 1f, accel * accel);
+
+            float remaining = m_Config.ShotSpeed * speedFactor * m_BoardView.Diameter * deltaTime;
             float maxStep = m_Trajectory.MaxStep;
 
             while (remaining > 0f)

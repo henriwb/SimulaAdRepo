@@ -27,6 +27,8 @@ MonoBehaviour:
   PointsPerPop: 10
   PointsPerDrop: 20
   ShotSpeed: 18
+  ShotStartSpeedFactor: 0.35
+  ShotAccelerationTime: 0.25
   AimLimitDegrees: 75
   SwipeDegreesPerScreenWidth: 150
   HitDistanceFactor: 0.85

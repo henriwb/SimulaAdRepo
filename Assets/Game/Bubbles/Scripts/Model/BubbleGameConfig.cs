@@ -35,8 +35,13 @@ namespace SimulaAd.Bubbles
         public int PointsPerDrop = 20;
 
         [Header("Shot & Aim")]
-        [Tooltip("Projectile speed in bubble diameters per second.")]
+        [Tooltip("Projectile top speed in bubble diameters per second.")]
         public float ShotSpeed = 18f;
+        [Tooltip("Speed at launch as a fraction of ShotSpeed (the shot accelerates from here).")]
+        [Range(0.05f, 1f)]
+        public float ShotStartSpeedFactor = 0.35f;
+        [Tooltip("Seconds to accelerate from the start speed to ShotSpeed (ease-in).")]
+        public float ShotAccelerationTime = 0.25f;
         [Tooltip("Max aim angle from straight up, in degrees.")]
         public float AimLimitDegrees = 75f;
         [Tooltip("Aim degrees added by swiping across the full screen width (swipe right = aim right).")]

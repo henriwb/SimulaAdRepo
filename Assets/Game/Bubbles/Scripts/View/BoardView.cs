@@ -25,6 +25,14 @@ namespace SimulaAd.Bubbles
         [SerializeField] float m_PopDuration = 0.2f;
         [SerializeField] float m_DropDuration = 0.5f;
 
+        [Header("Impact wobble")]
+        [Tooltip("Bubbles within this many diameters of a landing shot wobble.")]
+        [SerializeField] float m_WobbleRadius = 2.2f;
+        [Tooltip("Squash/stretch strength at the impact point (fades with distance).")]
+        [SerializeField] float m_WobbleStrength = 0.18f;
+        [Tooltip("Ripple delay per diameter of distance, in seconds.")]
+        [SerializeField] float m_WobbleRippleDelay = 0.04f;
+
         RectTransform m_Area;
         int m_Columns;
         float m_LaidOutWidth = -1f;
@@ -117,6 +125,32 @@ namespace SimulaAd.Bubbles
         {
             view.SetLocalPosition(CellToLocal(row, col));
             m_Placed[Key(row, col)] = view;
+        }
+
+        /// <summary>
+        /// Ripple of squash & stretch around a cell (the bubble that just landed and its neighbors):
+        /// stronger and earlier close to the impact, fading with distance. Deterministic.
+        /// </summary>
+        public void WobbleAround(int row, int col)
+        {
+            Vector2 impact = CellToLocal(row, col);
+            float radius = m_WobbleRadius * Diameter;
+            if (radius <= 0f)
+                return;
+
+            for (int key = 0; key < m_Placed.Length; key++)
+            {
+                BubbleView view = m_Placed[key];
+                if (view == null)
+                    continue;
+
+                float distance = (CellToLocal(key / m_Columns, key % m_Columns) - impact).magnitude;
+                if (distance > radius)
+                    continue;
+
+                float falloff = 1f - distance / radius;
+                view.Wobble(m_WobbleStrength * falloff, m_WobbleRippleDelay * distance / Diameter);
+            }
         }
 
         public void Pop(int row, int col)

@@ -1,7 +1,8 @@
 # Stages the delivery folder (zip its CONTENTS, not the folder itself):
 #   <Target>\index.html   Playworks export (already there, or copied from -Html)
 #   <Target>\README.md    copied from Delivery/README.md
-#   <Target>\source\      Assets/, Packages/manifest.json, ProjectSettings/, luna.json
+#   <Target>\source\      game source only (scripts, config, scene, manifest, luna.json);
+#                         the full Unity project is on GitHub (linked in the README)
 #
 # Usage:
 #   .\Delivery\stage.ps1                                   # refresh README + source
@@ -34,13 +35,31 @@ foreach ($extra in 'README.txt', 'urls.txt') {
 
 Copy-Item (Join-Path $repo 'Delivery\README.md') (Join-Path $Target 'README.md') -Force
 
+# Game source only (the full Unity project is on GitHub, linked in the README).
 $source = Join-Path $Target 'source'
 Remove-Item $source -Recurse -Force -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Force (Join-Path $source 'Packages') | Out-Null
-Copy-Item (Join-Path $repo 'Assets') $source -Recurse -Force
-Copy-Item (Join-Path $repo 'ProjectSettings') $source -Recurse -Force
-Copy-Item (Join-Path $repo 'Packages\manifest.json') (Join-Path $source 'Packages') -Force
-Copy-Item (Join-Path $repo 'luna.json') $source -Force
+$sourceItems = @(
+    'Assets\Game\Bubbles\Scripts',
+    'Assets\Game\Bubbles\Config',
+    'Assets\Game\InteractiveEndCardBuilder\Scripts',
+    'Assets\Game\Shared\Scripts\AudioManager.cs',
+    'Assets\Game\Shared\Scripts\RunRestarter.cs',
+    'Assets\Game\Shared\Scripts\SoundID.cs',
+    'Assets\Game\Core\Scripts\Singleton\AbstractSingleton.cs',
+    'Assets\Game\Core\Scripts\Data\AudioSettings.cs',
+    'Assets\Game\Shared\Scenes\Boot.unity',
+    'Packages\manifest.json',
+    'luna.json'
+)
+foreach ($item in $sourceItems) {
+    $from = Join-Path $repo $item
+    if (-not (Test-Path $from)) { Write-Warning "Missing source item: $item"; continue }
+    $to = Join-Path $source $item
+    New-Item -ItemType Directory -Force (Split-Path $to -Parent) | Out-Null
+    Copy-Item $from $to -Recurse -Force
+}
+# Readable source only: drop Unity .meta files.
+Get-ChildItem $source -Recurse -Filter *.meta | Remove-Item -Force
 
 # Report
 $todo = (Select-String (Join-Path $Target 'README.md') -Pattern 'TODO').Count
@@ -49,11 +68,7 @@ Write-Host "Staged: $Target"
 Write-Host ("Uncompressed total: {0:N0} bytes" -f $total)
 if ($todo -gt 0) { Write-Warning "README.md still has $todo TODO(s)." }
 
-Write-Host "Largest folders in source/Assets:"
-Get-ChildItem (Join-Path $source 'Assets') -Directory -Recurse -Depth 1 |
-    ForEach-Object { [pscustomobject]@{ Folder = $_.FullName.Substring($source.Length + 1); Bytes = (Get-ChildItem $_.FullName -Recurse -File | Measure-Object Length -Sum).Sum } } |
-    Sort-Object Bytes -Descending | Select-Object -First 8 |
-    ForEach-Object { Write-Host ("  {0,14:N0}  {1}" -f $_.Bytes, $_.Folder) }
+Write-Host ("source/: {0:N0} bytes in {1} files" -f (Get-ChildItem $source -Recurse -File | Measure-Object Length -Sum).Sum, (Get-ChildItem $source -Recurse -File).Count)
 
 if ($Zip) {
     $outDir = Split-Path $Target -Parent

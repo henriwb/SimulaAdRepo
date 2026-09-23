@@ -50,6 +50,12 @@ namespace SimulaAd.Bubbles
             m_Input.SetInputEnabled(enabled);
         }
 
+        /// <summary>Backfire animation on the lever when a bubble is shot.</summary>
+        public void PlayRecoil()
+        {
+            m_View.PlayRecoil();
+        }
+
         public void ResetAim()
         {
             m_Dragging = false;

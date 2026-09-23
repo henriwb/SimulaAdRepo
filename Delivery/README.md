@@ -43,8 +43,10 @@ frame its own origin. Served over HTTP, the warning does not appear.
 ```
 index.html      Runnable build (Unity Playworks export, single file)
 README.md       This file
-source/         Unity project source: Assets/, Packages/manifest.json, ProjectSettings/, luna.json
+source/         Game source code (C# scripts, config, scene, luna.json)
 ```
+
+Full Unity project (all assets, packages and settings): https://github.com/henriwb/SimulaAdRepo
 
 ## Build instructions (rebuild from source)
 
@@ -60,7 +62,7 @@ Required Playworks settings (already in `luna.json`):
 - Shader cache off (`useShadersCache: false`).
 
 Steps:
-1. Open `source/` in Unity 6000.0.84f1. Startup scene: `Assets/Game/Shared/Scenes/Boot.unity`.
+1. Clone https://github.com/henriwb/SimulaAdRepo and open it in Unity 6000.0.84f1. Startup scene: `Assets/Game/Shared/Scenes/Boot.unity`.
 2. Playworks window → Upload To Creative Library → **Build And Upload**.
 3. Creative Library → export **Unity Ads** → rename `*_unityads.html` to `index.html`.
 
@@ -97,7 +99,7 @@ Suggested manual check: DevTools → Network → reload: only `localhost`; then 
 | Resize / interrupted input | Board re-lays out whenever the play area changes size/orientation (checked each frame); drag state cleared on focus loss; End Card blocks game input while open |
 | Outcomes used | Win only (board cleared); no timer, no lose state |
 | Restart without duplicates | Replay = in-place reset (`GameLoopController.ResetGame`): stops coroutines, cancels an in-flight shot, returns bubbles/coins/popups to their pools, resets cheers and End Card; listeners are registered once |
-| ZIP ≤ 5,000,000 bytes | index.html: 2,175,361 bytes; the ZIP adds only this README and the game's source code |
+| ZIP ≤ 5,000,000 bytes | Final ZIP ≈ 2.03 MB (2,027,649 bytes when packaged): index.html (2,175,361 bytes uncompressed) + this README + game source code |
 
 ## Testing
 
@@ -105,7 +107,7 @@ Suggested manual check: DevTools → Network → reload: only `localhost`; then 
 |---|---|---|---|
 | Unity Editor (Game view 390×844, 320×568, 844×390, 568×320) | Emulated | Full loop, special bubbles, coins, cheers, replay, End Card, mute, layouts in both orientations | OK |
 | Chrome (Windows desktop), mouse | Real | Full loop in the web build, End Card, mute | OK |
-| Smartphone, mobile browser (web build) | Real | Touch drag-to-aim/release-to-shoot, portrait and landscape, full loop, End Card, mute | OK |
+| Xiaomi POCO X5 (Android), Mi Browser and Chrome for Android (web build) | Real | Touch drag-to-aim/release-to-shoot, portrait and landscape, full loop, End Card, mute | OK |
 | Browser at several resolutions (portrait and landscape) | Emulated | Layout and scaling of the play area and UI | OK |
 | Chrome headless, 844×390 / 390×844 / 320×568 | Emulated | Load, console errors, network requests | OK (headless Chrome enforces a ~500 px minimum viewport, so its portrait screenshots are clipped; portrait layout was checked on the phone and in the other resolution tests) |
 
@@ -146,7 +148,7 @@ Game concept and design (bubble shooter for a rewards app, drag-to-aim/release-t
 - **Aim guide from the real flight code:** `TrajectoryController` holds the step/bounce/contact rules used by both the shot and the preview, so the dotted guide and ghost bubble can't disagree with the actual shot.
 - **Input changed during development:** a circular lever and a Shoot button were replaced by "drag anywhere to aim, release to shoot".
 - **Special bubbles:** 3 wildcards per board; they count as any color and clear their row; if only specials remain they pop automatically so the board can always be cleared.
-- **Juice:** "+points" labels (pop-in, wobble, rainbow, rise, fade), coins arcing into the counter with a punch on arrival, milestone cheers (pop, flash, wobble, 2 s), a mascot that hops idly and jumps on each shot.
+- **Juice:** "+points" labels (pop-in, wobble, rainbow, rise, fade), coins arcing into the counter with a punch on arrival, milestone cheers (pop, flash, wobble, 2 s), a mascot that hops idly and jumps on each shot, a screen shake on clears (scaled by bubbles cleared, stronger for row wipes), an impact ripple (damped squash & stretch) on the landed bubble and its neighbors, an accelerating shot (ease-in from 35% to top speed — speed only, so the aim guide stays exact), the "next" indicator jumping in an arc onto the "current" slot on each shot, and a lever backfire (kick back opposite the aim + squash along the barrel, damped spring). All deterministic (no random motion) and hand-animated.
 - **Orientation:** portrait-first. A rotate-only prompt was rejected (reviewers on desktop can't rotate a monitor); landscape adapts instead, with the same on-screen UI size (swapped CanvasScaler reference) and its own play-area layout.
 - **Replay = in-place state reset**, not a scene reload.
 - **CTA follows the brief, not the ad-network flow:** `InstallFullGame()` would log a Playworks CTA event but, without MRAID, calls `window.open(storeLink)` (navigation + external request). Replaced by a local confirmation + console log.

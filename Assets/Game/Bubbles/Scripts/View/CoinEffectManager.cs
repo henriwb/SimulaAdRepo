@@ -22,7 +22,7 @@ namespace SimulaAd.Bubbles
         [SerializeField] float m_FlightDuration = 0.65f;
         [Tooltip("Delay between consecutive coins of one burst.")]
         [SerializeField] float m_Stagger = 0.04f;
-        [Tooltip("Arc height above the straight line, in the coin layer's units.")]
+        [Tooltip("How far below the lower end the arc dips (-Y) before rising to the target, in the coin layer's units.")]
         [SerializeField] float m_ArcHeight = 120f;
         [Tooltip("Random sideways spread of the arc control point.")]
         [SerializeField] float m_ArcSpread = 80f;
@@ -78,10 +78,12 @@ namespace SimulaAd.Bubbles
             Vector2 from = layer.InverseTransformPoint(worldFrom);
             Vector2 to = layer.InverseTransformPoint(m_Target.position);
 
-            // Quadratic Bézier control point: above the midpoint, randomly pushed sideways.
+            // Quadratic Bézier control point BELOW the lower end: the coin first dips (-Y), then swings
+            // up into the counter. Going above the top end made coins leave the screen, since the
+            // counter sits at the top. Sideways offset only spreads coins of one burst apart.
             Vector2 middle = (from + to) * 0.5f;
             float side = m_Random.Range(-m_ArcSpread, m_ArcSpread);
-            Vector2 control = new Vector2(middle.x + side, Mathf.Max(from.y, to.y) + m_ArcHeight);
+            Vector2 control = new Vector2(middle.x + side, Mathf.Min(from.y, to.y) - m_ArcHeight);
 
             // Like ScorePopupView.Show: clone = sibling of the template, moved last, active right away.
             // During its stagger delay it just waits at the bubble spot (small), then flies.
@@ -115,6 +117,11 @@ namespace SimulaAd.Bubbles
                 m_Elapsed[i] = elapsed;
 
                 Image coin = m_Active[i];
+
+                // Keep every live coin drawn on top: siblings created after launch (the next shot's
+                // bubble, popups…) are appended after it and would otherwise cover it.
+                coin.rectTransform.SetAsLastSibling();
+
                 if (elapsed < 0f)
                     continue; // waiting for its stagger slot: stays at the bubble spot
 

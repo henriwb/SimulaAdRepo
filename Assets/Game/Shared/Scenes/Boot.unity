@@ -915,6 +915,7 @@ MonoBehaviour:
   m_AimGuide: {fileID: 1767977065}
   m_ScorePopups: {fileID: 1559243851}
   m_CoinEffect: {fileID: 1387089081}
+  m_Shake: {fileID: 1767977067}
   m_Mascot: {fileID: 2081764501}
   m_Bubbles: {fileID: 189505671}
   m_Lever: {fileID: 189505670}
@@ -1263,6 +1264,9 @@ MonoBehaviour:
   m_CurrentBubble: {fileID: 328304070}
   m_NextBubble: {fileID: 846822852}
   m_GameClearLabel: {fileID: 300950601}
+  m_AdvanceDuration: 0.28
+  m_AdvanceArcHeight: 45
+  m_NextPopInDuration: 0.18
 --- !u!114 &239453657
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2938,7 +2942,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.9686275, g: 0.48627454, b: 0.21176472, a: 1}
+  m_Color: {r: 0.65882355, g: 0.33333334, b: 0.9176471, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -8870,7 +8874,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1285430500}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.098537624, y: 0, z: 0, w: 0.99513334}
+  m_LocalRotation: {x: 0.09853762, y: 0, z: 0, w: 0.99513334}
   m_LocalPosition: {x: 0, y: 6, z: -9}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -15225,6 +15229,7 @@ GameObject:
   - component: {fileID: 1767977064}
   - component: {fileID: 1767977065}
   - component: {fileID: 1767977066}
+  - component: {fileID: 1767977067}
   m_Layer: 5
   m_Name: GameAreaPortrait
   m_TagString: Untagged
@@ -15270,6 +15275,9 @@ MonoBehaviour:
   m_Config: {fileID: 11400000, guid: 53f4a1aad17d4449a93cdeba8ddc0ffe, type: 2}
   m_PopDuration: 0.2
   m_DropDuration: 0.5
+  m_WobbleRadius: 2.2
+  m_WobbleStrength: 0.18
+  m_WobbleRippleDelay: 0.04
 --- !u!114 &1767977065
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15302,6 +15310,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_LandscapeLayout: {fileID: 1741326748}
+--- !u!114 &1767977067
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1767977062}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dae8308ac44f39f478b172a0b2aa566b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Target: {fileID: 0}
+  m_MaxOffset: 12
+  m_Duration: 0.3
+  m_Frequency: 22
 --- !u!1 &1790487114
 GameObject:
   m_ObjectHideFlags: 0

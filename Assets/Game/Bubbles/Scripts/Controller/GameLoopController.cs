@@ -23,6 +23,8 @@ namespace SimulaAd.Bubbles
         [SerializeField] ScorePopupView m_ScorePopups;
         [Tooltip("Optional coins flying from cleared bubbles to the score icon.")]
         [SerializeField] CoinEffectManager m_CoinEffect;
+        [Tooltip("Optional screen shake when bubbles pop.")]
+        [SerializeField] ScreenShakeView m_Shake;
         [Tooltip("Optional character that jumps when a bubble is shot.")]
         [SerializeField] JumpingMascotView m_Mascot;
 
@@ -112,6 +114,9 @@ namespace SimulaAd.Bubbles
             m_Bubbles.Cancel();
             if (m_ScorePopups != null)
                 m_ScorePopups.HideAll();
+            if (m_Shake != null)
+                m_Shake.Stop();
+            m_Hud.ResetIndicators();
             if (m_CoinEffect != null)
                 m_CoinEffect.HideAll();
             if (m_Mascot != null)
@@ -145,10 +150,12 @@ namespace SimulaAd.Bubbles
             int color = m_Session.CurrentColor;
             m_Session.CurrentColor = m_Session.NextColor;
             m_Session.NextColor = PickColor();
-            RefreshHud();
+            // The next indicator jumps onto the current slot, then the new next pops in.
+            m_Hud.PlayAdvance(m_BoardView.GetSprite(m_Session.CurrentColor), m_BoardView.GetSprite(m_Session.NextColor));
 
             Vector2 origin = m_BoardView.WorldToLocal(m_Hud.CurrentBubbleWorldPosition);
             m_Bubbles.Launch(color, m_Session.AimAngle, origin, OnBubbleLanded);
+            m_Lever.PlayRecoil();
 
             if (m_Mascot != null)
                 m_Mascot.PlayShotJump();
@@ -165,6 +172,7 @@ namespace SimulaAd.Bubbles
             }
 
             m_Board.Place(cell, color, view);
+            m_BoardView.WobbleAround(cell.x, cell.y); // impact ripple on the landed bubble and its neighbors
             StartCoroutine(ResolveShot(cell));
         }
 
@@ -181,6 +189,7 @@ namespace SimulaAd.Bubbles
                 ShowClearFeedback(m_Board.DroppedCells, m_Config.PointsPerDrop);
                 RefreshHud();
                 ReportProgress();
+                ShakeForClear(result.Popped + result.Dropped, result.RowsCleared);
                 PlaySound(SoundID.CoinSound);
                 yield return new WaitForSeconds(m_BoardView.ResolveDuration);
             }
@@ -194,6 +203,7 @@ namespace SimulaAd.Bubbles
                 ShowClearFeedback(m_Board.PoppedCells, m_Config.PointsPerPop);
                 RefreshHud();
                 ReportProgress();
+                ShakeForClear(bonus, 0);
                 PlaySound(SoundID.CoinSound);
                 yield return new WaitForSeconds(m_BoardView.ResolveDuration);
             }
@@ -243,6 +253,7 @@ namespace SimulaAd.Bubbles
             BeginClearFeedback();
             ShowClearFeedback(m_Board.PoppedCells, m_Config.PointsPerPop);
             RefreshHud();
+            ShakeForClear(popped, 0);
             PlaySound(SoundID.CoinSound);
             yield return new WaitForSeconds(m_BoardView.ResolveDuration);
 
@@ -337,6 +348,16 @@ namespace SimulaAd.Bubbles
             Vector2 origin = m_BoardView.WorldToLocal(m_Hud.CurrentBubbleWorldPosition);
             Vector2Int landing = m_Trajectory.PredictPath(origin, m_Session.AimAngle, m_Config.GuideMaxBounces, m_GuidePoints);
             m_AimGuide.Show(m_GuidePoints, landing, m_Session.CurrentColor);
+        }
+
+        /// <summary>Shake scaled by how much was cleared: a 4-match is a small bump, big clears and row wipes hit harder.</summary>
+        void ShakeForClear(int bubblesCleared, int rowsCleared)
+        {
+            if (m_Shake == null || bubblesCleared <= 0)
+                return;
+
+            float strength = 0.35f + 0.05f * bubblesCleared + 0.4f * rowsCleared;
+            m_Shake.Shake(Mathf.Min(strength, 1.5f));
         }
 
         void RefreshHud()
