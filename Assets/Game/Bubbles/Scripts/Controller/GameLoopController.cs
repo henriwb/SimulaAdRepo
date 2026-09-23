@@ -36,6 +36,7 @@ namespace SimulaAd.Bubbles
         BubbleGridModel m_Grid;
         BoardController m_Board;
         TrajectoryController m_Trajectory;
+        RandomSource m_Random;
         EndCardController m_EndCardController;
 
         readonly List<int> m_ColorBuffer = new List<int>();
@@ -46,8 +47,9 @@ namespace SimulaAd.Bubbles
             m_Session = new GameSessionModel();
             m_Grid = new BubbleGridModel(m_Config.Columns, m_Config.MaxRows);
 
-            m_BoardView.Setup(m_Config.Columns);
-            m_Board = new BoardController(m_Config, m_Grid, m_BoardView);
+            m_BoardView.Setup(m_Config.Columns, m_Config.MaxRows);
+            m_Random = new RandomSource(12345);
+            m_Board = new BoardController(m_Config, m_Grid, m_BoardView, m_Random);
             m_Trajectory = new TrajectoryController(m_Config, m_BoardView, m_Board);
 
             m_Bubbles.Initialize(m_Config, m_BoardView, m_Board, m_Trajectory);
@@ -59,8 +61,9 @@ namespace SimulaAd.Bubbles
                 m_EndCardController = m_EndCard.GetComponentInChildren<EndCardController>(true);
 
                 // The Replay button lives inside the End Card prefab, which can't reference scene objects.
-                foreach (RunRestarter restarter in m_EndCard.GetComponentsInChildren<RunRestarter>(true))
-                    restarter.Initialize(this);
+                RunRestarter[] restarters = m_EndCard.GetComponentsInChildren<RunRestarter>(true);
+                for (int i = 0; i < restarters.Length; i++)
+                    restarters[i].Initialize(this);
             }
 
             m_Lever.ShotReleased += OnShotReleased;
@@ -82,6 +85,13 @@ namespace SimulaAd.Bubbles
         void Start()
         {
             ResetGame();
+        }
+
+        void Update()
+        {
+            // Score popups animate by hand; their view may sit on an inactive template (no Update of its own).
+            if (m_ScorePopups != null)
+                m_ScorePopups.Tick(Time.deltaTime);
         }
 
         /// <summary>Starts a fresh run in place: new board, score 0, aim centered, no pending timers, End Card hidden.</summary>
@@ -213,8 +223,8 @@ namespace SimulaAd.Bubbles
             if (m_ScorePopups == null)
                 return;
 
-            foreach (Vector2Int cell in cells)
-                m_ScorePopups.Show(m_BoardView.CellToWorld(cell.x, cell.y), points);
+            for (int i = 0; i < cells.Count; i++)
+                m_ScorePopups.Show(m_BoardView.CellToWorld(cells[i].x, cells[i].y), points);
         }
 
         void ShowEndCard()
@@ -246,9 +256,9 @@ namespace SimulaAd.Bubbles
         {
             m_Board.GetOccupiedColors(m_ColorBuffer);
             if (m_ColorBuffer.Count == 0)
-                return Random.Range(0, m_Board.ColorCount);
+                return m_Random.Range(0, m_Board.ColorCount);
 
-            return m_ColorBuffer[Random.Range(0, m_ColorBuffer.Count)];
+            return m_ColorBuffer[m_Random.Range(0, m_ColorBuffer.Count)];
         }
 
         void SetState(GameState state)

@@ -49,11 +49,14 @@ namespace SimulaAd.Bubbles
         /// <summary>Cells dropped (disconnected from the ceiling) by the last <see cref="Resolve"/>.</summary>
         public List<Vector2Int> DroppedCells => m_DroppedCells;
 
-        public BoardController(BubbleGameConfig config, BubbleGridModel grid, BoardView view)
+        readonly RandomSource m_Random;
+
+        public BoardController(BubbleGameConfig config, BubbleGridModel grid, BoardView view, RandomSource random)
         {
             m_Config = config;
             m_Grid = grid;
             m_View = view;
+            m_Random = random;
             m_Visited = new bool[grid.Columns * grid.Rows];
         }
 
@@ -80,7 +83,7 @@ namespace SimulaAd.Bubbles
             {
                 for (int col = 0; col < m_Grid.RowLength(row); col++)
                 {
-                    int color = Random.Range(0, colors);
+                    int color = m_Random.Range(0, colors);
                     m_Grid.Set(row, col, color);
                     m_View.Spawn(row, col, color);
                 }
@@ -177,8 +180,10 @@ namespace SimulaAd.Bubbles
             if (m_Cluster.Count < m_Config.MatchCount)
                 return result;
 
-            foreach (Vector2Int popped in m_Cluster)
+            // Index loops (no foreach) throughout: enumerators are unreliable in Playworks builds.
+            for (int i = 0; i < m_Cluster.Count; i++)
             {
+                Vector2Int popped = m_Cluster[i];
                 m_Grid.Set(popped.x, popped.y, BubbleGridModel.Empty);
                 m_View.Pop(popped.x, popped.y);
                 m_PoppedCells.Add(popped);
@@ -244,8 +249,9 @@ namespace SimulaAd.Bubbles
                 m_Cluster.Add(current);
 
                 GetNeighbors(current.x, current.y);
-                foreach (Vector2Int next in m_Neighbors)
+                for (int i = 0; i < m_Neighbors.Count; i++)
                 {
+                    Vector2Int next = m_Neighbors[i];
                     int index = Index(next.x, next.y);
                     if (m_Visited[index] || m_Grid.Get(next.x, next.y) != color)
                         continue;
@@ -276,8 +282,9 @@ namespace SimulaAd.Bubbles
                 m_Stack.RemoveAt(m_Stack.Count - 1);
 
                 GetNeighbors(current.x, current.y);
-                foreach (Vector2Int next in m_Neighbors)
+                for (int i = 0; i < m_Neighbors.Count; i++)
                 {
+                    Vector2Int next = m_Neighbors[i];
                     int index = Index(next.x, next.y);
                     if (m_Visited[index] || m_Grid.Get(next.x, next.y) == BubbleGridModel.Empty)
                         continue;
@@ -291,8 +298,8 @@ namespace SimulaAd.Bubbles
         bool HasOccupiedNeighbor(int row, int col)
         {
             GetNeighbors(row, col);
-            foreach (Vector2Int next in m_Neighbors)
-                if (m_Grid.Get(next.x, next.y) != BubbleGridModel.Empty)
+            for (int i = 0; i < m_Neighbors.Count; i++)
+                if (m_Grid.Get(m_Neighbors[i].x, m_Neighbors[i].y) != BubbleGridModel.Empty)
                     return true;
 
             return false;
@@ -303,10 +310,10 @@ namespace SimulaAd.Bubbles
         {
             m_Neighbors.Clear();
             Vector2Int[] offsets = row % 2 == 0 ? m_EvenRowNeighbors : m_OddRowNeighbors;
-            foreach (Vector2Int offset in offsets)
+            for (int i = 0; i < offsets.Length; i++)
             {
-                int r = row + offset.x;
-                int c = col + offset.y;
+                int r = row + offsets[i].x;
+                int c = col + offsets[i].y;
                 if (m_Grid.IsInside(r, c))
                     m_Neighbors.Add(new Vector2Int(r, c));
             }

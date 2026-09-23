@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using DG.Tweening;
 using TMPro;
 using UnityEngine;
 
@@ -10,32 +9,36 @@ namespace SimulaAd.Bubbles
     /// Each popup pops in, wobbles, cycles through rainbow colors, rises with an ease,
     /// fades out and returns to the pool. Clones spawn under the template's parent as its last child
     /// (drawn on top); positions arrive in world space and are converted here.
+    /// Hand-written animation (no DOTween), advanced by <see cref="Tick"/> from GameLoopController:
+    /// this component may sit on the inactive template, where Update never runs.
     /// View: visuals only; the controller decides positions and points.
     /// </summary>
     public class ScorePopupView : MonoBehaviour
     {
+        const float k_BackOvershoot = 1.70158f;
+
         [Tooltip("Inactive TextMeshProUGUI template (e.g. under GoalBoard). Clones spawn under the same parent, as its last child.")]
         [SerializeField] TextMeshProUGUI m_Template;
-        [Tooltip("Text format; {0} is the points.")]
+        [Tooltip("Text format; {0} is replaced by the points.")]
         [SerializeField] string m_Format = "+{0}";
         [Tooltip("Whole popup lifetime, in seconds.")]
         [SerializeField] float m_Duration = 0.9f;
 
-        [Header("Rise")]
+        [Header("Rise (ease-out cubic)")]
         [Tooltip("How far a popup rises, in the template parent's local units.")]
         [SerializeField] float m_RiseDistance = 45f;
-        [SerializeField] Ease m_RiseEase = Ease.OutCubic;
 
-        [Header("Pop-in")]
+        [Header("Pop-in (ease-out back)")]
         [SerializeField] float m_StartScale = 0.4f;
         [Tooltip("Fraction of the lifetime spent scaling in.")]
         [Range(0.05f, 0.5f)]
         [SerializeField] float m_PopInPortion = 0.2f;
 
         [Header("Wobble")]
-        [Tooltip("Max Z rotation of the wobble, in degrees.")]
+        [Tooltip("Max Z rotation of the wobble, in degrees (damps to 0).")]
         [SerializeField] float m_WobbleAngle = 18f;
-        [SerializeField] int m_WobbleVibrato = 8;
+        [Tooltip("Half-swings over the lifetime.")]
+        [SerializeField] float m_WobbleSwings = 8f;
 
         [Header("Rainbow")]
         [Tooltip("Full hue cycles over the popup lifetime.")]
@@ -49,7 +52,15 @@ namespace SimulaAd.Bubbles
         [SerializeField] float m_FadeStart = 0.55f;
 
         readonly List<TextMeshProUGUI> m_Pool = new List<TextMeshProUGUI>();
+
+        // Active popups: parallel lists (index i = one popup).
         readonly List<TextMeshProUGUI> m_Active = new List<TextMeshProUGUI>();
+        readonly List<float> m_Elapsed = new List<float>();
+        readonly List<float> m_StartY = new List<float>();
+        readonly List<float> m_HueOffset = new List<float>();
+
+        // Own generator (UnityEngine.Random is missing in Playworks builds); created on first use.
+        RandomSource m_Random;
 
         /// <param name="worldPosition">Where the popup appears (e.g. a bubble's cell), in world space.</param>
         public void Show(Vector3 worldPosition, int points)
@@ -57,40 +68,78 @@ namespace SimulaAd.Bubbles
             Transform parent = m_Template.transform.parent;
             Vector3 localPosition = parent.InverseTransformPoint(worldPosition);
 
+            if (m_Random == null)
+                m_Random = new RandomSource(104729);
+            float hueOffset = m_Random.Value(); // popups spawned together start on different colors
+
             TextMeshProUGUI popup = Take();
             RectTransform rect = popup.rectTransform;
-            float hueOffset = Random.value; // popups spawned together start on different colors
 
-            popup.text = string.Format(m_Format, points);
+            // Plain int → string (Bridge.toString): String.Format's number path is broken in Playworks builds.
+            popup.text = m_Format.Replace("{0}", points.ToString());
             rect.localPosition = new Vector3(localPosition.x, localPosition.y, 0f);
             rect.localRotation = Quaternion.identity;
-            rect.localScale = Vector3.one * m_StartScale;
+            rect.localScale = new Vector3(m_StartScale, m_StartScale, 1f);
             rect.SetAsLastSibling(); // newest popup draws on top of its siblings
             ApplyColor(popup, 0f, hueOffset);
             popup.gameObject.SetActive(true);
+
             m_Active.Add(popup);
+            m_Elapsed.Add(0f);
+            m_StartY.Add(localPosition.y);
+            m_HueOffset.Add(hueOffset);
+        }
 
-            rect.DOScale(1f, m_Duration * m_PopInPortion).SetEase(Ease.OutBack);
-            rect.DOLocalMoveY(localPosition.y + m_RiseDistance, m_Duration).SetEase(m_RiseEase);
-            rect.DOPunchRotation(new Vector3(0f, 0f, m_WobbleAngle), m_Duration, m_WobbleVibrato, 1f);
+        /// <summary>Advances every popup; called each frame by GameLoopController.</summary>
+        public void Tick(float deltaTime)
+        {
+            float duration = m_Duration > 0.01f ? m_Duration : 0.01f;
 
-            // One tween drives both hue and alpha so they never overwrite each other's color.
-            float progress = 0f;
-            DOTween.To(() => progress, value =>
+            for (int i = m_Active.Count - 1; i >= 0; i--)
+            {
+                float elapsed = m_Elapsed[i] + deltaTime;
+                m_Elapsed[i] = elapsed;
+                float t = elapsed / duration;
+
+                if (t >= 1f)
                 {
-                    progress = value;
-                    ApplyColor(popup, progress, hueOffset);
-                }, 1f, m_Duration)
-                .SetEase(Ease.Linear)
-                .SetTarget(popup)
-                .OnComplete(() => Release(popup));
+                    ReleaseAt(i);
+                    continue;
+                }
+
+                TextMeshProUGUI popup = m_Active[i];
+                RectTransform rect = popup.rectTransform;
+
+                // Pop-in: ease-out back from start scale to 1.
+                float popIn = t / m_PopInPortion;
+                float scale = 1f;
+                if (popIn < 1f)
+                {
+                    float u = popIn - 1f;
+                    float back = 1f + (k_BackOvershoot + 1f) * u * u * u + k_BackOvershoot * u * u;
+                    scale = m_StartScale + (1f - m_StartScale) * back;
+                }
+                rect.localScale = new Vector3(scale, scale, 1f);
+
+                // Rise: ease-out cubic.
+                float inverse = 1f - t;
+                float rise = 1f - inverse * inverse * inverse;
+                Vector3 position = rect.localPosition;
+                rect.localPosition = new Vector3(position.x, m_StartY[i] + m_RiseDistance * rise, 0f);
+
+                // Wobble: damped swing.
+                float angle = m_WobbleAngle * Mathf.Sin(t * m_WobbleSwings * Mathf.PI) * inverse;
+                rect.localRotation = Quaternion.Euler(0f, 0f, angle);
+
+                ApplyColor(popup, t, m_HueOffset[i]);
+            }
         }
 
         /// <summary>Stops and hides every popup (used on reset).</summary>
         public void HideAll()
         {
             for (int i = m_Active.Count - 1; i >= 0; i--)
-                Release(m_Active[i]);
+                ReleaseAt(i);
         }
 
         void ApplyColor(TextMeshProUGUI popup, float progress, float hueOffset)
@@ -109,25 +158,22 @@ namespace SimulaAd.Bubbles
             popup.color = color;
         }
 
-        // Local HSV conversion: keeps this View on plain math only.
+        // Local HSV conversion, float-only: no float→int casts / FloorToInt
+        // (they compile to Bridge.Int.clip32, missing in Playworks builds).
         static Color HsvToRgb(float h, float s, float v)
         {
-            float scaled = h * 6f;
-            int sector = Mathf.FloorToInt(scaled) % 6;
+            float scaled = Mathf.Repeat(h, 1f) * 6f;
             float f = scaled - Mathf.Floor(scaled);
             float p = v * (1f - s);
             float q = v * (1f - f * s);
             float t = v * (1f - (1f - f) * s);
 
-            switch (sector)
-            {
-                case 0: return new Color(v, t, p);
-                case 1: return new Color(q, v, p);
-                case 2: return new Color(p, v, t);
-                case 3: return new Color(p, q, v);
-                case 4: return new Color(t, p, v);
-                default: return new Color(v, p, q);
-            }
+            if (scaled < 1f) return new Color(v, t, p);
+            if (scaled < 2f) return new Color(q, v, p);
+            if (scaled < 3f) return new Color(p, v, t);
+            if (scaled < 4f) return new Color(p, q, v);
+            if (scaled < 5f) return new Color(t, p, v);
+            return new Color(v, p, q);
         }
 
         TextMeshProUGUI Take()
@@ -150,14 +196,17 @@ namespace SimulaAd.Bubbles
             return created;
         }
 
-        void Release(TextMeshProUGUI popup)
+        void ReleaseAt(int index)
         {
-            popup.rectTransform.DOKill();
-            popup.DOKill(); // also kills the color tween (SetTarget(popup))
+            TextMeshProUGUI popup = m_Active[index];
             popup.rectTransform.localRotation = Quaternion.identity;
             popup.gameObject.SetActive(false);
 
-            m_Active.Remove(popup);
+            m_Active.RemoveAt(index);
+            m_Elapsed.RemoveAt(index);
+            m_StartY.RemoveAt(index);
+            m_HueOffset.RemoveAt(index);
+
             if (!m_Pool.Contains(popup))
                 m_Pool.Add(popup);
         }

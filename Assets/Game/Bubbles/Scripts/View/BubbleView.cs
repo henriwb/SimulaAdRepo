@@ -1,5 +1,4 @@
 using System;
-using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -7,12 +6,28 @@ namespace SimulaAd.Bubbles
 {
     /// <summary>
     /// One bubble on screen (UI Image). View: sprite, size, position and animations only.
+    /// Pop/drop are hand-written in Update (no DOTween) to avoid tween behavior differences in
+    /// Playworks builds. Uses scaled time, so it pauses with Time.timeScale.
     /// </summary>
     [RequireComponent(typeof(Image))]
     public class BubbleView : MonoBehaviour
     {
+        enum Animation
+        {
+            None,
+            Pop,
+            Drop
+        }
+
         Image m_Image;
         RectTransform m_Rect;
+
+        Animation m_Animation;
+        float m_Elapsed;
+        float m_Duration;
+        float m_StartY;
+        float m_DropDistance;
+        Action m_OnComplete;
 
         void Awake()
         {
@@ -31,7 +46,7 @@ namespace SimulaAd.Bubbles
         public void Show(Sprite sprite, float diameter)
         {
             EnsureCache();
-            KillTweens();
+            StopAnimation();
             m_Rect.localScale = Vector3.one;
             m_Image.color = Color.white;
             m_Image.sprite = sprite;
@@ -63,33 +78,74 @@ namespace SimulaAd.Bubbles
             m_Rect.localPosition = new Vector3(position.x, position.y, 0f);
         }
 
+        /// <summary>Shrinks to nothing, then calls <paramref name="onComplete"/>.</summary>
         public void Pop(float duration, Action onComplete)
         {
-            EnsureCache();
-            KillTweens();
-            m_Rect.DOScale(0f, duration).SetEase(Ease.InBack).OnComplete(() => onComplete());
+            StartAnimation(Animation.Pop, duration, onComplete);
         }
 
+        /// <summary>Falls by <paramref name="distance"/> while fading out, then calls <paramref name="onComplete"/>.</summary>
         public void Drop(float distance, float duration, Action onComplete)
         {
-            EnsureCache();
-            KillTweens();
-            m_Rect.DOLocalMoveY(m_Rect.localPosition.y - distance, duration).SetEase(Ease.InQuad);
-            m_Image.DOFade(0f, duration).OnComplete(() => onComplete());
+            m_DropDistance = distance;
+            StartAnimation(Animation.Drop, duration, onComplete);
         }
 
         /// <summary>Stops animations without firing their callbacks and hides the bubble.</summary>
         public void Hide()
         {
             EnsureCache();
-            KillTweens();
+            StopAnimation();
             gameObject.SetActive(false);
         }
 
-        void KillTweens()
+        void StartAnimation(Animation animation, float duration, Action onComplete)
         {
-            m_Rect.DOKill();
-            m_Image.DOKill();
+            EnsureCache();
+            m_Animation = animation;
+            m_Elapsed = 0f;
+            m_Duration = duration > 0.01f ? duration : 0.01f;
+            m_StartY = m_Rect.localPosition.y;
+            m_OnComplete = onComplete;
+        }
+
+        void StopAnimation()
+        {
+            m_Animation = Animation.None;
+            m_OnComplete = null;
+        }
+
+        void Update()
+        {
+            if (m_Animation == Animation.None)
+                return;
+
+            m_Elapsed += Time.deltaTime;
+            float t = m_Elapsed / m_Duration;
+            if (t > 1f)
+                t = 1f;
+
+            if (m_Animation == Animation.Pop)
+            {
+                // Small swell, then shrink (ease-in-back feel).
+                float scale = t < 0.3f ? 1f + 0.2f * (t / 0.3f) : 1.2f * (1f - (t - 0.3f) / 0.7f);
+                m_Rect.localScale = new Vector3(scale, scale, 1f);
+            }
+            else
+            {
+                Vector3 position = m_Rect.localPosition;
+                m_Rect.localPosition = new Vector3(position.x, m_StartY - m_DropDistance * t * t, 0f);
+                Color color = m_Image.color;
+                m_Image.color = new Color(color.r, color.g, color.b, 1f - t);
+            }
+
+            if (t < 1f)
+                return;
+
+            Action onComplete = m_OnComplete;
+            StopAnimation();
+            if (onComplete != null)
+                onComplete();
         }
     }
 }

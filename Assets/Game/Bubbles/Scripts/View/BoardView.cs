@@ -30,10 +30,11 @@ namespace SimulaAd.Bubbles
         float m_LaidOutWidth = -1f;
         bool m_LaidOutLandscape;
 
-        readonly Dictionary<int, BubbleView> m_Placed = new Dictionary<int, BubbleView>();
+        // Placed bubbles by cell index (row * columns + col). A plain array, not a Dictionary:
+        // Dictionary.Values/Keys enumerators throw ('moveNext' of undefined) in Playworks builds.
+        BubbleView[] m_Placed = new BubbleView[0];
         readonly List<BubbleView> m_Animating = new List<BubbleView>();
         readonly List<BubbleView> m_Pool = new List<BubbleView>();
-        readonly List<int> m_KeyBuffer = new List<int>();
 
         /// <summary>Raised after a resize/rotation re-layout (bubble size and positions changed).</summary>
         public event Action LayoutChanged;
@@ -55,10 +56,11 @@ namespace SimulaAd.Bubbles
         }
         public float ResolveDuration => Mathf.Max(m_PopDuration, m_DropDuration);
 
-        public void Setup(int columns)
+        public void Setup(int columns, int rows)
         {
             m_Area = (RectTransform)transform;
             m_Columns = columns;
+            m_Placed = new BubbleView[columns * rows];
 
             if (m_BubbleTemplate != null)
                 m_BubbleTemplate.gameObject.SetActive(false);
@@ -140,9 +142,14 @@ namespace SimulaAd.Bubbles
         /// <summary>Returns every bubble (placed or mid-animation) to the pool.</summary>
         public void ClearAll()
         {
-            foreach (BubbleView view in m_Placed.Values)
-                Release(view);
-            m_Placed.Clear();
+            for (int i = 0; i < m_Placed.Length; i++)
+            {
+                if (m_Placed[i] == null)
+                    continue;
+
+                Release(m_Placed[i]);
+                m_Placed[i] = null;
+            }
 
             for (int i = m_Animating.Count - 1; i >= 0; i--)
                 Release(m_Animating[i]);
@@ -176,13 +183,15 @@ namespace SimulaAd.Bubbles
             float boardWidth = m_LaidOutWidth > 0f ? Mathf.Min(designWidth, m_LaidOutWidth) : designWidth;
             Diameter = boardWidth / m_Columns;
             RowHeight = Diameter * k_RowHeightFactor;
-            Debug.Log($"[{nameof(BoardView)}] Layout: area width={m_LaidOutWidth:0.#}, bubble diameter={Diameter:0.#}");
+            // No custom numeric formats (e.g. {x:0.#}): Bridge.Int.customFormat throws in Playworks builds.
+            Debug.Log($"[{nameof(BoardView)}] Layout: area width={m_LaidOutWidth}, bubble diameter={Diameter}");
 
-            m_KeyBuffer.Clear();
-            m_KeyBuffer.AddRange(m_Placed.Keys);
-            foreach (int key in m_KeyBuffer)
+            for (int key = 0; key < m_Placed.Length; key++)
             {
                 BubbleView view = m_Placed[key];
+                if (view == null)
+                    continue;
+
                 view.SetDiameter(Diameter);
                 view.SetLocalPosition(CellToLocal(key / m_Columns, key % m_Columns));
             }
@@ -199,11 +208,11 @@ namespace SimulaAd.Bubbles
         BubbleView Detach(int row, int col)
         {
             int key = Key(row, col);
-            BubbleView view;
-            if (!m_Placed.TryGetValue(key, out view))
+            BubbleView view = m_Placed[key];
+            if (view == null)
                 return null;
 
-            m_Placed.Remove(key);
+            m_Placed[key] = null;
             m_Animating.Add(view);
             return view;
         }
