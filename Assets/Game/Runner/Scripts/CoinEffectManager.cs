@@ -30,6 +30,14 @@ public class CoinEffectManager : AbstractSingleton<CoinEffectManager>, IGameEven
         PrepareEffects();
     }
 
+    // Events are ScriptableObjects and outlive the scene; unsubscribe so a reloaded run
+    // doesn't call this destroyed instance.
+    void OnDestroy()
+    {
+        if (m_CoinEvent != null)
+            m_CoinEvent.RemoveListener(this);
+    }
+
     private void Update()
     {
         //Get position in world that the coins should move towards (coin counter)

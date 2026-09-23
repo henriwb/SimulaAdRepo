@@ -90,8 +90,6 @@ namespace HyperCasual.Runner
 
         public void Win()
         {
-            PlayableSettings.Instance.CallLevelCompleteAnalytics();
-
 #if UNITY_EDITOR
             if (m_LevelEditorMode)
             {

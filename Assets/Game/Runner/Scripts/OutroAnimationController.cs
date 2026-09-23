@@ -29,6 +29,13 @@ public class OutroAnimationController : MonoBehaviour, IGameEventListener
         playerController = PlayerController.Instance;
         winEvent.AddListener(this);
     }
+
+    // Events are ScriptableObjects and outlive the scene; unsubscribe on scene reload.
+    void OnDestroy()
+    {
+        if (winEvent != null)
+            winEvent.RemoveListener(this);
+    }
     
     public void OnEventRaised()
     {

@@ -27,6 +27,13 @@ public class CheerPhraseController : MonoBehaviour, IGameEventListener
         cheerText.color = cheerPhraseColour;
     }
 
+    // Events are ScriptableObjects and outlive the scene; unsubscribe on scene reload.
+    private void OnDestroy()
+    {
+        if (keyCollectEvent != null)
+            keyCollectEvent.RemoveListener(this);
+    }
+
     public void OnEventRaised()
     {
         cheerText.text = phrases[ phraseCount ];

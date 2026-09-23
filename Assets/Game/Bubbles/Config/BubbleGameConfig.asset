@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9111d1a25fb49e0ad74b36f44a124f0, type: 3}
+  m_Name: BubbleGameConfig
+  m_EditorClassIdentifier: 
+  Columns: 8
+  StartRows: 5
+  MaxRows: 14
+  ColorSprites:
+  - {fileID: -8732201886075528616, guid: 6f1954d2e58790f4995d7633525e81be, type: 3}
+  - {fileID: -8732201886075528616, guid: 8da19fcfbfe0a0946a03e72e7e6d2fbc, type: 3}
+  - {fileID: -8732201886075528616, guid: 452f0267b4c85334c8b6af639fe0d193, type: 3}
+  - {fileID: -8732201886075528616, guid: cf86a07d151927e44a4d600c75615aa0, type: 3}
+  ColorCount: 4
+  MatchCount: 4
+  PointsPerPop: 10
+  PointsPerDrop: 20
+  ShotSpeed: 18
+  AimLimitDegrees: 75
+  SwipeDegreesPerScreenWidth: 150
+  ClearDelay: 1.2

@@ -16,7 +16,6 @@ namespace HyperCasual.Runner
             if (col.CompareTag(k_PlayerTag))
             {
                 GameManager.Instance.Lose();
-                PlayableSettings.Instance.CallDeathAnalytics();
             }
         }
     }

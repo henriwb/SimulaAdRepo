@@ -42,26 +42,5 @@ public class PlayableSettings : AbstractSingleton<PlayableSettings>
         if (Input.GetMouseButtonDown(0))
             RecieveTap();
     }
-
-    public void CallRetryAnalytics()
-    {
-#if LUNA_IS_PRESENT || LUNA_EDITOR_SOURCES
-        Luna.Unity.Analytics.LogEvent(Luna.Unity.Analytics.EventType.LevelRetry);
-#endif
-    }
-
-    public void CallDeathAnalytics()
-    {
-#if LUNA_IS_PRESENT || LUNA_EDITOR_SOURCES
-        Luna.Unity.Analytics.LogEvent(Luna.Unity.Analytics.EventType.LevelFailed);
-#endif
-    }
-
-    public void CallLevelCompleteAnalytics()
-    {
-#if LUNA_IS_PRESENT || LUNA_EDITOR_SOURCES
-        Luna.Unity.Analytics.LogEvent(Luna.Unity.Analytics.EventType.LevelWon);
-#endif
-    }
 }
 

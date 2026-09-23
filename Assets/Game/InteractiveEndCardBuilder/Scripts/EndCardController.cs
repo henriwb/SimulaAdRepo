@@ -208,6 +208,8 @@ public class EndCardController : MonoBehaviour
     [SerializeField] private Animator _endCardAnimator;
     [SerializeField] private RawImage _iconImage;
     [SerializeField] private RawImage _CTAButtonImage;
+    [Tooltip("Shown when the CTA is clicked (demo build: no store redirect).")]
+    [SerializeField] private GameObject _ctaConfirmation;
 
     private int _CTAButtonAnimationScale;
     private int _CTAButtonAnimationWobble;
@@ -244,6 +246,13 @@ public class EndCardController : MonoBehaviour
     {
         CreateInstance();
         _ScreenCTAButton.gameObject.SetActive(false);
+
+        // Register once: OpenEndCard runs on every replay and must not stack listeners.
+        _CTAButton.onClick.AddListener(ClickCTA);
+        _ScreenCTAButton.onClick.AddListener(ClickCTA);
+        if (_ctaConfirmation != null)
+            _ctaConfirmation.SetActive(false);
+
         _CTAButtonAnimationScale = Animator.StringToHash("Scale");
         _CTAButtonAnimationWobble = Animator.StringToHash("Wobble");
         _CTAButtonAnimationOpacity = Animator.StringToHash("Opacity");
@@ -264,15 +273,14 @@ public class EndCardController : MonoBehaviour
     void SetClickableOptions()
     {
         _ScreenCTAButton.gameObject.SetActive(false); //Always turn off
-        _CTAButton.onClick.AddListener(ClickCTA); //Always do this
+        EndCardOpenedEvent.RemoveListener(ClickCTA);
         switch (_endCardClickableOptions)
         {
             case EndCardClickableOptionsType.CTAButtonOnly:
-                //We always do this anyway
+                // CTA button listener is registered once in Awake
                 break;
             case EndCardClickableOptionsType.Fullscreen:
                 _ScreenCTAButton.gameObject.SetActive(true);
-                _ScreenCTAButton.onClick.AddListener(ClickCTA);
                 break;
             case EndCardClickableOptionsType.FireAppStoreClickOnShow:
                 EndCardOpenedEvent.AddListener(ClickCTA);
@@ -300,13 +308,22 @@ public class EndCardController : MonoBehaviour
 
         SetButtonAnimation();
         SetEndCardAnimationType();
-#if LUNA_IS_PRESENT || LUNA_EDITOR_SOURCES
-        Luna.Unity.Analytics.LogEvent(Luna.Unity.Analytics.EventType.EndCardShown);
-#endif
-        EndGame();
+    }
 
-        if (PlayableSettings.Instance.EndcardActivationSendsToStore)
-            ClickCTA();
+    /// <summary>
+    /// Hides the end card and returns its animators to their initial state, so the next
+    /// OpenEndCard (after a replay) animates in again.
+    /// </summary>
+    public void CloseEndCard()
+    {
+        _ScreenCTAButton.gameObject.SetActive(false);
+        if (_ctaConfirmation != null)
+            _ctaConfirmation.SetActive(false);
+
+        _endCardAnimator.Rebind();
+        _endCardAnimator.Update(0f);
+        _CTAButtonAnimator.Rebind();
+        _CTAButtonAnimator.Update(0f);
     }
 
     void SetCTAButtonPosition()
@@ -330,18 +347,12 @@ public class EndCardController : MonoBehaviour
         _buttonRect.pivot = new Vector2(buttonPositionX, buttonPositionY);
     }
 
+    // Demo build: confirm locally instead of Luna.Unity.Playable.InstallFullGame() (no navigation).
     public void ClickCTA()
     {
-#if LUNA_IS_PRESENT || LUNA_EDITOR_SOURCES
-        Luna.Unity.Playable.InstallFullGame();
-#endif
-    }
-
-    private void EndGame()
-    {
-#if LUNA_IS_PRESENT || LUNA_EDITOR_SOURCES
-        Luna.Unity.LifeCycle.GameEnded();
-#endif
+        Debug.Log("CTA clicked — demo only");
+        if (_ctaConfirmation != null)
+            _ctaConfirmation.SetActive(true);
     }
 
     void Start()
